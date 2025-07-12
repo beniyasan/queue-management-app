@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 console.log('Building configuration...');
+console.log('All environment variables:', Object.keys(process.env).filter(key => key.includes('SUPABASE')));
 
 // 環境変数を取得
 const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -11,8 +12,17 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
 console.log('Environment variables:', {
   hasUrl: !!supabaseUrl,
   hasKey: !!supabaseKey,
-  url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'missing'
+  url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'missing',
+  keyStart: supabaseKey ? `${supabaseKey.substring(0, 10)}...` : 'missing'
 });
+
+// 環境変数が空の場合はエラーを表示
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Missing environment variables!');
+  console.error('SUPABASE_URL:', supabaseUrl || 'NOT SET');
+  console.error('SUPABASE_ANON_KEY:', supabaseKey || 'NOT SET');
+  console.error('Please check Vercel environment variable settings');
+}
 
 // config.jsファイルを生成
 const configContent = `// Generated configuration file

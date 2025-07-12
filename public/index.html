@@ -400,10 +400,24 @@
         async function loadConfig() {
             try {
                 console.log('Loading configuration from static file...');
+                console.log('window.APP_CONFIG:', window.APP_CONFIG);
                 
                 // 静的ファイルから設定を取得
                 if (!window.APP_CONFIG) {
-                    throw new Error('APP_CONFIG not found. Build script may have failed.');
+                    console.error('APP_CONFIG not found. Build script may have failed.');
+                    
+                    // フォールバック: 手動設定を促すアラート
+                    const manualUrl = prompt('環境変数の設定に失敗しました。\nSupabase URLを手動で入力してください:');
+                    const manualKey = prompt('Supabase Anon Keyを手動で入力してください:');
+                    
+                    if (manualUrl && manualKey) {
+                        return {
+                            supabaseUrl: manualUrl,
+                            supabaseKey: manualKey
+                        };
+                    }
+                    
+                    throw new Error('APP_CONFIG not found and manual input cancelled.');
                 }
                 
                 const config = {
@@ -412,18 +426,35 @@
                 };
                 
                 console.log('Configuration loaded successfully:', {
-                    hasUrl: !!config.supabaseUrl && config.supabaseUrl !== '{{ SUPABASE_URL }}',
-                    hasKey: !!config.supabaseKey && config.supabaseKey !== '{{ SUPABASE_ANON_KEY }}',
-                    source: 'static file'
+                    hasUrl: !!config.supabaseUrl && config.supabaseUrl !== '{{ SUPABASE_URL }}' && config.supabaseUrl !== '',
+                    hasKey: !!config.supabaseKey && config.supabaseKey !== '{{ SUPABASE_ANON_KEY }}' && config.supabaseKey !== '',
+                    source: 'static file',
+                    urlLength: config.supabaseUrl ? config.supabaseUrl.length : 0,
+                    keyLength: config.supabaseKey ? config.supabaseKey.length : 0
                 });
                 
                 // 設定検証（テンプレート文字列が残っていないかチェック）
                 if (!config.supabaseUrl || 
                     !config.supabaseKey || 
                     config.supabaseUrl === '{{ SUPABASE_URL }}' ||
-                    config.supabaseKey === '{{ SUPABASE_ANON_KEY }}') {
+                    config.supabaseKey === '{{ SUPABASE_ANON_KEY }}' ||
+                    config.supabaseUrl === '' ||
+                    config.supabaseKey === '') {
                     
                     console.error('Invalid configuration - environment variables not replaced:', config);
+                    
+                    // フォールバック: 手動設定
+                    const manualUrl = prompt('環境変数が正しく設定されていません。\nSupabase URLを手動で入力してください:');
+                    const manualKey = prompt('Supabase Anon Keyを手動で入力してください:');
+                    
+                    if (manualUrl && manualKey) {
+                        console.log('Using manual configuration');
+                        return {
+                            supabaseUrl: manualUrl,
+                            supabaseKey: manualKey
+                        };
+                    }
+                    
                     alert('環境変数が正しく設定されていません。\nVercelの環境変数設定とビルドプロセスを確認してください。');
                     return null;
                 }
