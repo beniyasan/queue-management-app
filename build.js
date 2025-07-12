@@ -14,15 +14,37 @@ console.log('Environment variables:', {
   url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'missing'
 });
 
-// config.jsテンプレートを読み込み
-const templatePath = path.join(__dirname, 'public', 'config.js');
-let template = fs.readFileSync(templatePath, 'utf8');
+// config.jsファイルを生成
+const configContent = `// Generated configuration file
+window.APP_CONFIG = {
+  supabaseUrl: '${supabaseUrl}',
+  supabaseKey: '${supabaseKey}'
+};
+console.log('Config loaded:', { hasUrl: !!window.APP_CONFIG.supabaseUrl, hasKey: !!window.APP_CONFIG.supabaseKey });`;
 
-// 環境変数を置換
-template = template.replace('{{ SUPABASE_URL }}', supabaseUrl);
-template = template.replace('{{ SUPABASE_ANON_KEY }}', supabaseKey);
+const configPath = path.join(__dirname, 'public', 'config.js');
+fs.writeFileSync(configPath, configContent);
 
-// 出力
-fs.writeFileSync(templatePath, template);
+// HTMLファイルにも直接埋め込み（バックアップ）
+const htmlPath = path.join(__dirname, 'public', 'index.html');
+let htmlContent = fs.readFileSync(htmlPath, 'utf8');
 
-console.log('Configuration built successfully');
+// 既存の埋め込みスクリプトを削除
+htmlContent = htmlContent.replace(/<script id="env-config">[\s\S]*?<\/script>/g, '');
+
+// 新しい設定スクリプトを埋め込み
+const envScript = `
+    <script id="env-config">
+        window.APP_CONFIG = {
+            supabaseUrl: '${supabaseUrl}',
+            supabaseKey: '${supabaseKey}'
+        };
+        console.log('Environment config embedded:', { hasUrl: !!window.APP_CONFIG.supabaseUrl, hasKey: !!window.APP_CONFIG.supabaseKey });
+    </script>`;
+
+// </head>の直前に挿入
+htmlContent = htmlContent.replace('</head>', `${envScript}\n</head>`);
+
+fs.writeFileSync(htmlPath, htmlContent);
+
+console.log('Configuration built successfully - both config.js and HTML embedding');
