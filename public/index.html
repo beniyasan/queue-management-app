@@ -285,6 +285,68 @@
             font-family: monospace;
         }
 
+        .admin-url-section {
+            border: 2px solid #ff6b6b;
+            background: #fff5f5;
+        }
+
+        .admin-url-header {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        .admin-url-header:hover {
+            background-color: rgba(255, 107, 107, 0.1);
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin: -5px -10px;
+        }
+
+        .admin-url-header label {
+            margin: 0;
+            font-weight: 600;
+            color: #d63384;
+            cursor: pointer;
+        }
+
+        .toggle-icon {
+            font-size: 18px;
+            color: #d63384;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .admin-url-content {
+            margin-top: 15px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .admin-url-content.collapsed {
+            max-height: 0;
+            margin-top: 0;
+            opacity: 0;
+        }
+
+        .admin-url-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
         @media (max-width: 768px) {
             .queue-container {
                 grid-template-columns: 1fr;
@@ -406,10 +468,16 @@
                     <button class="btn" onclick="copyUrl()" style="margin-top: 10px;">URLをコピー</button>
                 </div>
 
-                <div class="url-share">
-                    <label>管理者URL (このセッションを再開する場合):</label>
-                    <input type="text" id="creatorUrl" readonly>
-                    <button class="btn" onclick="copyCreatorUrl()" style="margin-top: 10px;">管理者URLをコピー</button>
+                <div class="url-share admin-url-section">
+                    <div class="admin-url-header" onclick="toggleAdminUrl()">
+                        <label>🔒 管理者URL (このセッションを再開する場合)</label>
+                        <span id="adminUrlToggle" class="toggle-icon collapsed">▶</span>
+                    </div>
+                    <div id="adminUrlContent" class="admin-url-content collapsed">
+                        <p class="admin-url-warning">⚠️ この管理者URLは秘匿してください。知った人は管理権限を得られます。</p>
+                        <input type="text" id="creatorUrl" readonly>
+                        <button class="btn" onclick="copyCreatorUrl()" style="margin-top: 10px;">管理者URLをコピー</button>
+                    </div>
                 </div>
             </div>
 
@@ -1205,6 +1273,26 @@
                 } else {
                     alert('URLのコピーに失敗しました。手動でコピーしてください。');
                 }
+            }
+        }
+
+        // 管理者URL表示の切り替え
+        function toggleAdminUrl() {
+            const content = document.getElementById('adminUrlContent');
+            const toggle = document.getElementById('adminUrlToggle');
+            
+            if (content.classList.contains('collapsed')) {
+                // 展開
+                content.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+                toggle.textContent = '▼';
+                console.log('🔓 Admin URL expanded');
+            } else {
+                // 折りたたみ
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+                toggle.textContent = '▶';
+                console.log('🔒 Admin URL collapsed');
             }
         }
 
