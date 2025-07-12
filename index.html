@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>順番待ち管理アプリ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .session-info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .setup-section, .management-section {
+            margin-bottom: 30px;
+        }
+
+        .setup-section h2, .management-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group select, .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group select:focus, .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+        }
+
+        .queue-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .queue-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .queue-section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .user-list {
+            min-height: 200px;
+        }
+
+        .user-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+
+        .user-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .user-number {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .add-user-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .add-user-form input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .url-share {
+            background: #e8f4ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .url-share input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+
+        @media (max-width: 768px) {
+            .queue-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .add-user-form {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 順番待ち管理</h1>
+            <div id="sessionInfo" class="session-info hidden">
+                <p><strong>セッションコード:</strong> <span id="sessionCode"></span></p>
+                <p><strong>作成者:</strong> <span id="creatorStatus"></span></p>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- 初期設定セクション -->
+            <div id="setupSection" class="setup-section">
+                <h2>🚀 新しいセッションを開始</h2>
+                
+                <div class="form-group">
+                    <label for="masterName">主ユーザーの名前 (空白の場合は「主」):</label>
+                    <input type="text" id="masterName" placeholder="主ユーザーの名前を入力 (省略可)">
+                </div>
+                
+                <div class="form-group">
+                    <label for="partySize">パーティー人数を選択:</label>
+                    <select id="partySize">
+                        <option value="5">5人パーティー</option>
+                        <option value="6">6人パーティー</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="rotationCount">交代人数を選択:</label>
+                    <select id="rotationCount">
+                        <option value="1">1人ずつ交代</option>
+                        <option value="2">2人ずつ交代</option>
+                        <option value="3">3人ずつ交代</option>
+                    </select>
+                </div>
+
+                <button class="btn" onclick="startSession()">セッション開始</button>
+            </div>
+
+            <!-- 管理セクション -->
+            <div id="managementSection" class="management-section hidden">
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="partyCount">0</div>
+                        <div class="stat-label">パーティー参加者</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="queueCount">0</div>
+                        <div class="stat-label">キュー待機者</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalCount">0</div>
+                        <div class="stat-label">総参加者数</div>
+                    </div>
+                </div>
+
+                <div class="add-user-form">
+                    <input type="text" id="newUserName" placeholder="ユーザー名を入力">
+                    <button class="btn" onclick="addUser()">ユーザー追加</button>
+                </div>
+
+                <div class="controls">
+                    <button class="btn" onclick="nextRotation()" id="nextBtn">次へ (交代実行)</button>
+                    <button class="btn btn-danger" onclick="resetSession()">セッションリセット</button>
+                </div>
+
+                <div class="queue-container">
+                    <div class="queue-section">
+                        <h3>🎮 パーティー参加者</h3>
+                        <div id="partyList" class="user-list"></div>
+                    </div>
+                    <div class="queue-section">
+                        <h3>⏳ キュー待機者</h3>
+                        <div id="queueList" class="user-list"></div>
+                    </div>
+                </div>
+
+                <div class="url-share">
+                    <label>閲覧専用URL:</label>
+                    <input type="text" id="shareUrl" readonly>
+                    <button class="btn" onclick="copyUrl()" style="margin-top: 10px;">URLをコピー</button>
+                </div>
+
+                <div class="url-share">
+                    <label>管理者URL (このセッションを再開する場合):</label>
+                    <input type="text" id="creatorUrl" readonly>
+                    <button class="btn" onclick="copyCreatorUrl()" style="margin-top: 10px;">管理者URLをコピー</button>
+                </div>
+            </div>
+
+            <!-- 閲覧専用セクション -->
+            <div id="viewSection" class="management-section hidden">
+                <h2>👀 閲覧専用モード</h2>
+                <p>このセッションは閲覧専用です。リアルタイムで状況を確認できます。</p>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="viewPartyCount">0</div>
+                        <div class="stat-label">パーティー参加者</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="viewQueueCount">0</div>
+                        <div class="stat-label">キュー待機者</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="viewTotalCount">0</div>
+                        <div class="stat-label">総参加者数</div>
+                    </div>
+                </div>
+
+                <div class="queue-container">
+                    <div class="queue-section">
+                        <h3>🎮 パーティー参加者</h3>
+                        <div id="viewPartyList" class="user-list"></div>
+                    </div>
+                    <div class="queue-section">
+                        <h3>⏳ キュー待機者</h3>
+                        <div id="viewQueueList" class="user-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // アプリケーションの状態管理
+        let appState = {
+            sessionCode: null,
+            partySize: 5,
+            rotationCount: 1,
+            party: [],
+            queue: [],
+            isCreator: false,
+            userIdCounter: 1
+        };
+
+        // セッション開始
+        function startSession() {
+            const partySize = parseInt(document.getElementById('partySize').value);
+            const rotationCount = parseInt(document.getElementById('rotationCount').value);
+            const masterNameInput = document.getElementById('masterName').value.trim();
+            const masterName = masterNameInput || '主';
+            
+            appState.partySize = partySize;
+            appState.rotationCount = rotationCount;
+            appState.sessionCode = generateSessionCode();
+            appState.isCreator = true;
+            
+            // 入力された名前（または「主」）でユーザーを固定作成
+            const masterUser = {
+                id: 0,
+                name: masterName,
+                joinedAt: new Date(),
+                isFixed: true
+            };
+            appState.party.push(masterUser);
+            
+            // URLを更新
+            updateUrl();
+            updateUrlDisplay();
+            
+            showManagementSection();
+            updateDisplay();
+        }
+
+        // セッションコード生成
+        function generateSessionCode() {
+            return Math.random().toString(36).substr(2, 8).toUpperCase();
+        }
+
+        // URLを更新（実際のデプロイ環境で動作）
+        function updateUrl() {
+            try {
+                const newUrl = `${window.location.origin}${window.location.pathname}?session=${appState.sessionCode}&creator=true`;
+                window.history.pushState({}, '', newUrl);
+            } catch (error) {
+                console.log('URL update not supported in this environment');
+            }
+        }
+
+        // URL表示を更新
+        function updateUrlDisplay() {
+            const baseUrl = window.location.origin + window.location.pathname;
+            const viewUrl = `${baseUrl}?session=${appState.sessionCode}`;
+            const creatorUrl = `${baseUrl}?session=${appState.sessionCode}&creator=true`;
+            
+            document.getElementById('shareUrl').value = viewUrl;
+            
+            if (appState.isCreator) {
+                const creatorUrlElement = document.getElementById('creatorUrl');
+                if (creatorUrlElement) {
+                    creatorUrlElement.value = creatorUrl;
+                }
+            }
+        }
+
+        // 管理セクションを表示
+        function showManagementSection() {
+            document.getElementById('setupSection').classList.add('hidden');
+            document.getElementById('managementSection').classList.remove('hidden');
+            document.getElementById('sessionInfo').classList.remove('hidden');
+            
+            document.getElementById('sessionCode').textContent = appState.sessionCode;
+            document.getElementById('creatorStatus').textContent = appState.isCreator ? '管理者' : '閲覧者';
+            
+            updateUrlDisplay();
+        }
+
+        // 閲覧専用セクションを表示
+        function showViewSection() {
+            document.getElementById('setupSection').classList.add('hidden');
+            document.getElementById('viewSection').classList.remove('hidden');
+            document.getElementById('sessionInfo').classList.remove('hidden');
+            
+            document.getElementById('sessionCode').textContent = appState.sessionCode;
+            document.getElementById('creatorStatus').textContent = '閲覧者';
+        }
+
+        // ユーザー追加
+        function addUser() {
+            const nameInput = document.getElementById('newUserName');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                alert('ユーザー名を入力してください');
+                return;
+            }
+            
+            const user = {
+                id: appState.userIdCounter++,
+                name: name,
+                joinedAt: new Date()
+            };
+            
+            if (appState.party.length < appState.partySize) {
+                appState.party.push(user);
+            } else {
+                appState.queue.push(user);
+            }
+            
+            nameInput.value = '';
+            updateDisplay();
+        }
+
+        // 次の交代を実行
+        function nextRotation() {
+            if (appState.party.length === 0) {
+                alert('パーティーにユーザーがいません');
+                return;
+            }
+            
+            const rotatableUsers = appState.party.filter(user => !user.isFixed);
+            
+            if (rotatableUsers.length === 0) {
+                alert('交代可能なユーザーがいません');
+                return;
+            }
+            
+            const rotationAmount = Math.min(appState.rotationCount, rotatableUsers.length);
+            const rotatingUsers = rotatableUsers.slice(0, rotationAmount);
+            
+            rotatingUsers.forEach(user => {
+                const index = appState.party.indexOf(user);
+                if (index > -1) {
+                    appState.party.splice(index, 1);
+                }
+            });
+            
+            appState.queue.push(...rotatingUsers);
+            
+            const availableSlots = appState.partySize - appState.party.length;
+            const newPartyMembers = appState.queue.splice(0, availableSlots);
+            appState.party.push(...newPartyMembers);
+            
+            updateDisplay();
+        }
+
+        // ユーザー削除
+        function removeUser(id, fromParty) {
+            if (id === 0) {
+                const masterUser = appState.party.find(user => user.id === 0);
+                const masterName = masterUser ? masterUser.name : '主ユーザー';
+                alert(`「${masterName}」は削除できません`);
+                return;
+            }
+            
+            if (fromParty) {
+                appState.party = appState.party.filter(user => user.id !== id);
+                const replacements = appState.queue.splice(0, appState.partySize - appState.party.length);
+                appState.party.push(...replacements);
+            } else {
+                appState.queue = appState.queue.filter(user => user.id !== id);
+            }
+            
+            updateDisplay();
+        }
+
+        // 表示を更新
+        function updateDisplay() {
+            if (appState.isCreator) {
+                updateCreatorDisplay();
+            } else {
+                updateViewerDisplay();
+            }
+        }
+
+        // 管理者用表示更新
+        function updateCreatorDisplay() {
+            document.getElementById('partyCount').textContent = appState.party.length;
+            document.getElementById('queueCount').textContent = appState.queue.length;
+            document.getElementById('totalCount').textContent = appState.party.length + appState.queue.length;
+            
+            const partyList = document.getElementById('partyList');
+            partyList.innerHTML = '';
+            appState.party.forEach((user, index) => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                
+                if (user.isFixed) {
+                    userDiv.style.background = 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)';
+                    userDiv.style.border = '2px solid #ffd700';
+                }
+                
+                userDiv.innerHTML = `
+                    <div>
+                        <span class="user-name">${user.name}${user.isFixed ? ' 👑' : ''}</span>
+                        <span class="user-number">${index + 1}</span>
+                    </div>
+                    ${user.isFixed ? '<span style="color: #666; font-size: 0.9em;">固定</span>' : `<button class="btn btn-danger" onclick="removeUser(${user.id}, true)">削除</button>`}
+                `;
+                partyList.appendChild(userDiv);
+            });
+            
+            const queueList = document.getElementById('queueList');
+            queueList.innerHTML = '';
+            appState.queue.forEach((user, index) => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                userDiv.innerHTML = `
+                    <div>
+                        <span class="user-name">${user.name}</span>
+                        <span class="user-number">待機${index + 1}</span>
+                    </div>
+                    <button class="btn btn-danger" onclick="removeUser(${user.id}, false)">削除</button>
+                `;
+                queueList.appendChild(userDiv);
+            });
+            
+            const nextBtn = document.getElementById('nextBtn');
+            const rotatableUsers = appState.party.filter(user => !user.isFixed);
+            nextBtn.disabled = rotatableUsers.length === 0;
+        }
+
+        // 閲覧者用表示更新
+        function updateViewerDisplay() {
+            document.getElementById('viewPartyCount').textContent = appState.party.length;
+            document.getElementById('viewQueueCount').textContent = appState.queue.length;
+            document.getElementById('viewTotalCount').textContent = appState.party.length + appState.queue.length;
+            
+            const partyList = document.getElementById('viewPartyList');
+            partyList.innerHTML = '';
+            appState.party.forEach((user, index) => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                
+                if (user.isFixed) {
+                    userDiv.style.background = 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)';
+                    userDiv.style.border = '2px solid #ffd700';
+                }
+                
+                userDiv.innerHTML = `
+                    <div>
+                        <span class="user-name">${user.name}${user.isFixed ? ' 👑' : ''}</span>
+                        <span class="user-number">${index + 1}</span>
+                    </div>
+                    ${user.isFixed ? '<span style="color: #666; font-size: 0.9em;">固定</span>' : ''}
+                `;
+                partyList.appendChild(userDiv);
+            });
+            
+            const queueList = document.getElementById('viewQueueList');
+            queueList.innerHTML = '';
+            appState.queue.forEach((user, index) => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                userDiv.innerHTML = `
+                    <div>
+                        <span class="user-name">${user.name}</span>
+                        <span class="user-number">待機${index + 1}</span>
+                    </div>
+                `;
+                queueList.appendChild(userDiv);
+            });
+        }
+
+        // URLをコピー
+        function copyUrl() {
+            const shareUrl = document.getElementById('shareUrl');
+            shareUrl.select();
+            shareUrl.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                alert('閲覧専用URLをコピーしました！');
+            } catch (err) {
+                // 新しいAPIを試す
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(shareUrl.value).then(() => {
+                        alert('閲覧専用URLをコピーしました！');
+                    }).catch(() => {
+                        alert('URLのコピーに失敗しました。手動でコピーしてください。');
+                    });
+                } else {
+                    alert('URLのコピーに失敗しました。手動でコピーしてください。');
+                }
+            }
+        }
+
+        // 管理者URLをコピー
+        function copyCreatorUrl() {
+            const creatorUrl = document.getElementById('creatorUrl');
+            creatorUrl.select();
+            creatorUrl.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                alert('管理者URLをコピーしました！');
+            } catch (err) {
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(creatorUrl.value).then(() => {
+                        alert('管理者URLをコピーしました！');
+                    }).catch(() => {
+                        alert('URLのコピーに失敗しました。手動でコピーしてください。');
+                    });
+                } else {
+                    alert('URLのコピーに失敗しました。手動でコピーしてください。');
+                }
+            }
+        }
+
+        // セッションリセット
+        function resetSession() {
+            if (confirm('セッションをリセットしますか？すべてのデータが削除されます。')) {
+                const masterUser = appState.party.find(user => user.isFixed);
+                appState.party = masterUser ? [masterUser] : [];
+                appState.queue = [];
+                appState.userIdCounter = 1;
+                updateDisplay();
+            }
+        }
+
+        // Enterキーでユーザー追加とセッション開始
+        document.addEventListener('DOMContentLoaded', function() {
+            const newUserInput = document.getElementById('newUserName');
+            if (newUserInput) {
+                newUserInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        addUser();
+                    }
+                });
+            }
+            
+            const masterNameInput = document.getElementById('masterName');
+            if (masterNameInput) {
+                masterNameInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        startSession();
+                    }
+                });
+            }
+        });
+
+        // URL パラメータをチェックして初期化
+        function initializeFromUrl() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const sessionCode = urlParams.get('session');
+                const isCreator = urlParams.get('creator') === 'true';
+                
+                if (sessionCode) {
+                    appState.sessionCode = sessionCode;
+                    appState.isCreator = isCreator;
+                    
+                    if (isCreator) {
+                        showManagementSection();
+                    } else {
+                        showViewSection();
+                    }
+                    
+                    updateDisplay();
+                }
+            } catch (error) {
+                console.log('URL parameter parsing failed:', error);
+            }
+        }
+
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeFromUrl();
+        });
+    </script>
+</body>
+</html>
