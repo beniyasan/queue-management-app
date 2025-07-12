@@ -355,6 +355,35 @@
             font-weight: 500;
         }
 
+        .session-info-header {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        .session-info-header:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin: -5px -10px;
+        }
+
+        .session-info-content {
+            margin-top: 15px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .session-info-content.collapsed {
+            max-height: 0;
+            margin-top: 0;
+            opacity: 0;
+        }
+
         @media (max-width: 768px) {
             .queue-container {
                 grid-template-columns: 1fr;
@@ -375,9 +404,15 @@
         <div class="header">
             <h1>🎯 順番待ち管理</h1>
             <div id="sessionInfo" class="session-info hidden">
-                <p><strong>セッションコード:</strong> <span id="sessionCode"></span></p>
-                <p><strong>作成者:</strong> <span id="creatorStatus"></span></p>
-                <p id="connectionStatus" style="display: none;"><strong>接続状態:</strong> <span id="connectionStatusText">接続中...</span></p>
+                <div class="session-info-header" onclick="toggleSessionInfo()">
+                    <span><strong>セッション情報</strong></span>
+                    <span id="sessionInfoToggle" class="toggle-icon collapsed">▶</span>
+                </div>
+                <div id="sessionInfoContent" class="session-info-content collapsed">
+                    <p><strong>セッションコード:</strong> <span id="sessionCode"></span></p>
+                    <p><strong>作成者:</strong> <span id="creatorStatus"></span></p>
+                    <p id="connectionStatus" style="display: none;"><strong>接続状態:</strong> <span id="connectionStatusText">接続中...</span></p>
+                </div>
             </div>
         </div>
 
@@ -1310,6 +1345,26 @@
                 toggle.classList.add('collapsed');
                 toggle.textContent = '▶';
                 console.log('🔒 Admin URL collapsed');
+            }
+        }
+
+        // セッション情報表示の切り替え
+        function toggleSessionInfo() {
+            const content = document.getElementById('sessionInfoContent');
+            const toggle = document.getElementById('sessionInfoToggle');
+            
+            if (content.classList.contains('collapsed')) {
+                // 展開
+                content.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+                toggle.textContent = '▼';
+                console.log('🔓 Session info expanded');
+            } else {
+                // 折りたたみ
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+                toggle.textContent = '▶';
+                console.log('🔒 Session info collapsed');
             }
         }
 
