@@ -1,0 +1,13 @@
+{
+  "name": "queue-management-app",
+  "version": "1.0.0",
+  "description": "順番待ち管理アプリ",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx http-server",
+    "build": "echo 'No build step required'"
+  },
+  "keywords": ["queue", "management", "webapp"],
+  "author": "Your Name",
+  "license": "MIT"
+}
