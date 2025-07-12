@@ -453,7 +453,10 @@
 
         // Supabaseにセッションデータを保存
         async function saveSessionToSupabase() {
-            if (!supabase) return;
+            if (!supabase) {
+                console.error('Supabase not initialized');
+                return false;
+            }
             
             try {
                 const sessionData = {
@@ -464,27 +467,44 @@
                     updated_at: new Date().toISOString()
                 };
 
-                const { error } = await supabase
+                console.log('Saving session data:', sessionData);
+
+                const { data, error } = await supabase
                     .from('sessions')
                     .upsert(sessionData, { onConflict: 'session_code' });
 
                 if (error) {
-                    console.error('Error saving session:', error);
+                    console.error('❌ Error saving session:', error);
+                    alert(`セッション保存エラー: ${error.message}`);
+                    return false;
+                } else {
+                    console.log('✅ Session saved successfully:', data);
+                    return true;
                 }
             } catch (error) {
-                console.error('Error saving session:', error);
+                console.error('❌ Exception saving session:', error);
+                alert(`セッション保存例外: ${error.message}`);
+                return false;
             }
         }
 
         // Supabaseにユーザーデータを保存
         async function saveUsersToSupabase() {
-            if (!supabase) return;
+            if (!supabase) {
+                console.error('Supabase not initialized');
+                return false;
+            }
             
             try {
-                await supabase
+                console.log('Deleting existing users for session:', appState.sessionCode);
+                const { error: deleteError } = await supabase
                     .from('session_users')
                     .delete()
                     .eq('session_code', appState.sessionCode);
+
+                if (deleteError) {
+                    console.error('❌ Error deleting existing users:', deleteError);
+                }
 
                 const allUsers = [
                     ...appState.party.map((user, index) => ({
@@ -507,17 +527,29 @@
                     }))
                 ];
 
+                console.log('Saving users data:', allUsers);
+
                 if (allUsers.length > 0) {
-                    const { error } = await supabase
+                    const { data, error } = await supabase
                         .from('session_users')
                         .insert(allUsers);
 
                     if (error) {
-                        console.error('Error saving users:', error);
+                        console.error('❌ Error saving users:', error);
+                        alert(`ユーザー保存エラー: ${error.message}`);
+                        return false;
+                    } else {
+                        console.log('✅ Users saved successfully:', data);
+                        return true;
                     }
+                } else {
+                    console.log('No users to save');
+                    return true;
                 }
             } catch (error) {
-                console.error('Error saving users:', error);
+                console.error('❌ Exception saving users:', error);
+                alert(`ユーザー保存例外: ${error.message}`);
+                return false;
             }
         }
 
@@ -674,6 +706,8 @@
 
         // セッション開始
         async function startSession() {
+            console.log('🚀 Starting new session...');
+            
             if (!supabase && !(await initSupabase())) {
                 alert('Supabaseの初期化に失敗しました。');
                 return;
@@ -689,6 +723,13 @@
             appState.sessionCode = generateSessionCode();
             appState.isCreator = true;
             
+            console.log('Session state:', {
+                sessionCode: appState.sessionCode,
+                partySize: appState.partySize,
+                rotationCount: appState.rotationCount,
+                isCreator: appState.isCreator
+            });
+            
             // 入力された名前（または「主」）でユーザーを固定作成
             const masterUser = {
                 id: 0,
@@ -699,8 +740,17 @@
             appState.party.push(masterUser);
             
             // Supabaseに保存
-            await saveSessionToSupabase();
-            await saveUsersToSupabase();
+            console.log('💾 Saving to Supabase...');
+            const sessionSaved = await saveSessionToSupabase();
+            const usersSaved = await saveUsersToSupabase();
+            
+            if (!sessionSaved || !usersSaved) {
+                console.error('❌ Failed to save to Supabase');
+                alert('データの保存に失敗しました。コンソールでエラーを確認してください。');
+                return;
+            }
+            
+            console.log('✅ Data saved successfully');
             
             // URLを更新
             updateUrl();
@@ -785,8 +835,15 @@
                 appState.queue.push(user);
             }
             
+            console.log('👤 Adding user:', user);
+            
             // Supabaseに保存
-            await saveUsersToSupabase();
+            const saved = await saveUsersToSupabase();
+            if (!saved) {
+                console.error('❌ Failed to save user');
+                alert('ユーザーの保存に失敗しました。');
+                return;
+            }
             
             nameInput.value = '';
             updateDisplay();
@@ -809,6 +866,8 @@
             const rotationAmount = Math.min(appState.rotationCount, rotatableUsers.length);
             const rotatingUsers = rotatableUsers.slice(0, rotationAmount);
             
+            console.log('🔄 Rotating users:', rotatingUsers);
+            
             rotatingUsers.forEach(user => {
                 const index = appState.party.indexOf(user);
                 if (index > -1) {
@@ -823,7 +882,12 @@
             appState.party.push(...newPartyMembers);
             
             // Supabaseに保存
-            await saveUsersToSupabase();
+            const saved = await saveUsersToSupabase();
+            if (!saved) {
+                console.error('❌ Failed to save rotation');
+                alert('交代の保存に失敗しました。');
+                return;
+            }
             
             updateDisplay();
         }
@@ -837,6 +901,8 @@
                 return;
             }
             
+            console.log('🗑️ Removing user:', { id, fromParty });
+            
             if (fromParty) {
                 appState.party = appState.party.filter(user => user.id !== id);
                 const replacements = appState.queue.splice(0, appState.partySize - appState.party.length);
@@ -846,7 +912,12 @@
             }
             
             // Supabaseに保存
-            await saveUsersToSupabase();
+            const saved = await saveUsersToSupabase();
+            if (!saved) {
+                console.error('❌ Failed to save user removal');
+                alert('ユーザー削除の保存に失敗しました。');
+                return;
+            }
             
             updateDisplay();
         }
