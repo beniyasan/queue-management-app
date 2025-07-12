@@ -120,6 +120,14 @@
             box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
         }
 
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #ffb000 100%);
+        }
+
+        .btn-warning:hover {
+            box-shadow: 0 8px 20px rgba(255, 193, 7, 0.3);
+        }
+
         .queue-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1150,6 +1158,9 @@
             document.getElementById('queueCount').textContent = appState.queue.length;
             document.getElementById('totalCount').textContent = appState.party.length + appState.queue.length;
             
+            // 固定ユーザ数の表示を更新
+            updateFixedUserCount();
+            
             const partyList = document.getElementById('partyList');
             partyList.innerHTML = '';
             appState.party.forEach((user, index) => {
@@ -1166,7 +1177,13 @@
                         <span class="user-name">${user.name}${user.isFixed ? ' 👑' : ''}</span>
                         <span class="user-number">${index + 1}</span>
                     </div>
-                    ${user.isFixed ? '<span style="color: #666; font-size: 0.9em;">固定</span>' : `<button class="btn btn-danger" onclick="removeUser(${user.id}, true)">削除</button>`}
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        ${user.id === 0 ? 
+                            '<span style="color: #666; font-size: 0.9em;">主（固定）</span>' : 
+                            `<button class="btn ${user.isFixed ? 'btn-warning' : ''}" onclick="toggleUserFixed(${user.id})" style="font-size: 0.8em; padding: 6px 12px;">${user.isFixed ? '固定解除' : '固定'}</button>
+                            ${!user.isFixed ? `<button class="btn btn-danger" onclick="removeUser(${user.id}, true)" style="font-size: 0.8em; padding: 6px 12px;">削除</button>` : ''}`
+                        }
+                    </div>
                 `;
                 partyList.appendChild(userDiv);
             });
@@ -1303,6 +1320,17 @@
             
             console.log(`🔧 Changing party size from ${oldSize} to ${newSize}`);
             
+            // 固定ユーザ数の制限チェック
+            const currentFixedCount = appState.party.filter(user => user.isFixed).length;
+            const newMaxFixed = newSize - 1;
+            
+            if (currentFixedCount > newMaxFixed) {
+                alert(`パーティーサイズ${newSize}人では固定ユーザーは最大${newMaxFixed}人までです。\n現在の固定ユーザー数: ${currentFixedCount}人\n\n先に固定ユーザーを解除してください。`);
+                // セレクトボックスを元の値に戻す
+                document.getElementById('currentPartySize').value = oldSize;
+                return;
+            }
+            
             appState.partySize = newSize;
             
             // パーティーサイズが小さくなった場合、余剰メンバーをキューに移動
@@ -1342,6 +1370,86 @@
             
             // Supabaseに保存
             await saveSessionToSupabase();
+            
+            updateDisplay();
+        }
+
+        // 固定ユーザ数の検証
+        function validateFixedUserCount(isAdding = false) {
+            const maxFixed = appState.partySize - 1;
+            const currentFixed = appState.party.filter(user => user.isFixed).length;
+            
+            if (isAdding) {
+                return currentFixed < maxFixed;
+            } else {
+                return currentFixed <= maxFixed;
+            }
+        }
+
+        // 固定ユーザ数の表示更新
+        function updateFixedUserCount() {
+            const maxFixed = appState.partySize - 1;
+            const currentFixed = appState.party.filter(user => user.isFixed).length;
+            
+            // 固定ユーザ数の表示を追加（設定パネル内に表示）
+            let fixedCountDisplay = document.getElementById('fixedCountDisplay');
+            if (!fixedCountDisplay) {
+                const settingsPanel = document.querySelector('.settings-panel .settings-row');
+                if (settingsPanel) {
+                    const fixedCountGroup = document.createElement('div');
+                    fixedCountGroup.className = 'setting-group';
+                    fixedCountGroup.innerHTML = `
+                        <label>固定ユーザ数:</label>
+                        <div id="fixedCountDisplay" style="padding: 8px; background: #f8f9fa; border-radius: 6px; font-weight: 600; color: #333;"></div>
+                    `;
+                    settingsPanel.appendChild(fixedCountGroup);
+                    fixedCountDisplay = document.getElementById('fixedCountDisplay');
+                }
+            }
+            
+            if (fixedCountDisplay) {
+                fixedCountDisplay.textContent = `${currentFixed} / ${maxFixed}人`;
+                if (currentFixed >= maxFixed) {
+                    fixedCountDisplay.style.color = '#dc3545';
+                } else {
+                    fixedCountDisplay.style.color = '#333';
+                }
+            }
+        }
+
+        // ユーザーの固定状態を切り替え
+        async function toggleUserFixed(userId) {
+            if (userId === 0) {
+                alert('主ユーザーの固定状態は変更できません');
+                return;
+            }
+            
+            const user = appState.party.find(u => u.id === userId);
+            if (!user) {
+                alert('ユーザーが見つかりません');
+                return;
+            }
+            
+            // 固定にする場合の制限チェック
+            if (!user.isFixed && !validateFixedUserCount(true)) {
+                const maxFixed = appState.partySize - 1;
+                alert(`固定ユーザーは最大${maxFixed}人までです`);
+                return;
+            }
+            
+            // 固定状態を切り替え
+            user.isFixed = !user.isFixed;
+            
+            console.log(`🔧 User ${user.name} fixed status changed to: ${user.isFixed}`);
+            
+            // Supabaseに保存
+            const saved = await saveUsersToSupabase();
+            if (!saved) {
+                // 失敗時は元に戻す
+                user.isFixed = !user.isFixed;
+                alert('固定状態の変更に失敗しました');
+                return;
+            }
             
             updateDisplay();
         }
