@@ -259,6 +259,7 @@
             <div id="sessionInfo" class="session-info hidden">
                 <p><strong>セッションコード:</strong> <span id="sessionCode"></span></p>
                 <p><strong>作成者:</strong> <span id="creatorStatus"></span></p>
+                <p id="connectionStatus" style="display: none;"><strong>接続状態:</strong> <span id="connectionStatusText">接続中...</span></p>
             </div>
         </div>
 
@@ -396,11 +397,24 @@
         // 環境変数から設定を取得
         async function loadConfig() {
             try {
+                console.log('Loading configuration from /api/config...');
                 const response = await fetch('/api/config');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 const config = await response.json();
+                console.log('Configuration loaded successfully');
+                
+                // 設定検証
+                if (!config.supabaseUrl || !config.supabaseKey) {
+                    console.error('Invalid configuration: missing supabaseUrl or supabaseKey');
+                    return null;
+                }
+                
                 return config;
             } catch (error) {
                 console.error('Failed to load config:', error);
+                alert('設定の読み込みに失敗しました。環境変数が正しく設定されているか確認してください。');
                 return null;
             }
         }
@@ -413,8 +427,28 @@
                 return false;
             }
             
-            supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
-            return true;
+            console.log('Initializing Supabase with URL:', config.supabaseUrl);
+            supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey, {
+                realtime: {
+                    params: {
+                        eventsPerSecond: 10,
+                    },
+                },
+            });
+
+            // 接続テスト
+            try {
+                const { data, error } = await supabase.from('sessions').select('*').limit(1);
+                if (error) {
+                    console.error('Supabase connection test failed:', error);
+                    return false;
+                }
+                console.log('✅ Supabase connection test successful');
+                return true;
+            } catch (error) {
+                console.error('Supabase connection test error:', error);
+                return false;
+            }
         }
 
         // Supabaseにセッションデータを保存
@@ -551,6 +585,8 @@
         function setupRealtimeSubscription() {
             if (!supabase || !appState.sessionCode || appState.isCreator) return;
 
+            console.log('Setting up realtime subscription for session:', appState.sessionCode);
+
             subscription = supabase
                 .channel(`session:${appState.sessionCode}`)
                 .on(
@@ -562,12 +598,42 @@
                         filter: `session_code=eq.${appState.sessionCode}`
                     },
                     async (payload) => {
-                        console.log('Realtime update:', payload);
+                        console.log('Realtime update (session_users):', payload);
                         await loadSessionFromSupabase(appState.sessionCode);
                         updateDisplay();
                     }
                 )
-                .subscribe();
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'sessions',
+                        filter: `session_code=eq.${appState.sessionCode}`
+                    },
+                    async (payload) => {
+                        console.log('Realtime update (sessions):', payload);
+                        await loadSessionFromSupabase(appState.sessionCode);
+                        updateDisplay();
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('Realtime subscription status:', status);
+                    updateConnectionStatus(status);
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✅ Successfully subscribed to realtime updates');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        console.error('❌ Realtime subscription error');
+                        // リトライ機能
+                        setTimeout(() => {
+                            console.log('Retrying realtime subscription...');
+                            unsubscribeRealtime();
+                            setupRealtimeSubscription();
+                        }, 5000);
+                    } else if (status === 'CLOSED') {
+                        console.log('🔒 Realtime subscription closed');
+                    }
+                });
         }
 
         // リアルタイム購読の停止
@@ -575,6 +641,34 @@
             if (subscription) {
                 supabase.removeChannel(subscription);
                 subscription = null;
+            }
+        }
+
+        // 接続状態表示の更新
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connectionStatus');
+            const statusTextElement = document.getElementById('connectionStatusText');
+            
+            if (!appState.isCreator && statusElement && statusTextElement) {
+                statusElement.style.display = 'block';
+                
+                switch (status) {
+                    case 'SUBSCRIBED':
+                        statusTextElement.textContent = '🟢 リアルタイム接続中';
+                        statusTextElement.style.color = '#10b981';
+                        break;
+                    case 'CHANNEL_ERROR':
+                        statusTextElement.textContent = '🔴 接続エラー（再接続中...）';
+                        statusTextElement.style.color = '#ef4444';
+                        break;
+                    case 'CLOSED':
+                        statusTextElement.textContent = '🟡 接続終了';
+                        statusTextElement.style.color = '#f59e0b';
+                        break;
+                    default:
+                        statusTextElement.textContent = '🟡 接続中...';
+                        statusTextElement.style.color = '#f59e0b';
+                }
             }
         }
 
