@@ -192,6 +192,53 @@
             margin-bottom: 0;
         }
 
+        .settings-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .settings-panel h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .settings-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .setting-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        .setting-group select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e1e1e1;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .setting-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -314,6 +361,27 @@
                 <div class="add-user-form">
                     <input type="text" id="newUserName" placeholder="ユーザー名を入力">
                     <button class="btn" onclick="addUser()">ユーザー追加</button>
+                </div>
+
+                <div class="settings-panel">
+                    <h3>セッション設定</h3>
+                    <div class="settings-row">
+                        <div class="setting-group">
+                            <label for="currentPartySize">パーティー人数:</label>
+                            <select id="currentPartySize" onchange="updatePartySize()">
+                                <option value="5">5人パーティー</option>
+                                <option value="6">6人パーティー</option>
+                            </select>
+                        </div>
+                        <div class="setting-group">
+                            <label for="currentRotationCount">交代人数:</label>
+                            <select id="currentRotationCount" onchange="updateRotationCount()">
+                                <option value="1">1人ずつ交代</option>
+                                <option value="2">2人ずつ交代</option>
+                                <option value="3">3人ずつ交代</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="controls">
@@ -646,6 +714,16 @@
                 appState.rotationCount = sessionData.rotation_count;
                 appState.party = [];
                 appState.queue = [];
+                
+                // UIの設定値も更新
+                if (appState.isCreator) {
+                    setTimeout(() => {
+                        const partySizeSelect = document.getElementById('currentPartySize');
+                        const rotationCountSelect = document.getElementById('currentRotationCount');
+                        if (partySizeSelect) partySizeSelect.value = appState.partySize;
+                        if (rotationCountSelect) rotationCountSelect.value = appState.rotationCount;
+                    }, 100);
+                }
 
                 if (usersData) {
                     const partyUsers = usersData.filter(user => user.position === 'party');
@@ -862,6 +940,10 @@
             
             document.getElementById('sessionCode').textContent = appState.sessionCode;
             document.getElementById('creatorStatus').textContent = appState.isCreator ? '管理者' : '閲覧者';
+            
+            // 現在の設定値をセレクトボックスに反映
+            document.getElementById('currentPartySize').value = appState.partySize;
+            document.getElementById('currentRotationCount').value = appState.rotationCount;
             
             updateUrlDisplay();
         }
@@ -1124,6 +1206,56 @@
                     alert('URLのコピーに失敗しました。手動でコピーしてください。');
                 }
             }
+        }
+
+        // パーティーサイズ変更
+        async function updatePartySize() {
+            const newSize = parseInt(document.getElementById('currentPartySize').value);
+            const oldSize = appState.partySize;
+            
+            console.log(`🔧 Changing party size from ${oldSize} to ${newSize}`);
+            
+            appState.partySize = newSize;
+            
+            // パーティーサイズが小さくなった場合、余剰メンバーをキューに移動
+            if (newSize < oldSize && appState.party.length > newSize) {
+                const excess = appState.party.splice(newSize);
+                // 固定ユーザーは除外
+                const movableUsers = excess.filter(user => !user.isFixed);
+                const fixedUsers = excess.filter(user => user.isFixed);
+                
+                // 固定ユーザーはパーティーに戻す（強制的に入れる）
+                appState.party.push(...fixedUsers);
+                // 可動ユーザーはキューの先頭に追加
+                appState.queue.unshift(...movableUsers);
+            }
+            // パーティーサイズが大きくなった場合、キューからメンバーを補充
+            else if (newSize > oldSize) {
+                const availableSlots = newSize - appState.party.length;
+                if (availableSlots > 0 && appState.queue.length > 0) {
+                    const newMembers = appState.queue.splice(0, availableSlots);
+                    appState.party.push(...newMembers);
+                }
+            }
+            
+            // Supabaseに保存
+            await saveSessionToSupabase();
+            await saveUsersToSupabase();
+            
+            updateDisplay();
+        }
+
+        // 交代人数変更
+        async function updateRotationCount() {
+            const newCount = parseInt(document.getElementById('currentRotationCount').value);
+            console.log(`🔧 Changing rotation count to ${newCount}`);
+            
+            appState.rotationCount = newCount;
+            
+            // Supabaseに保存
+            await saveSessionToSupabase();
+            
+            updateDisplay();
         }
 
         // セッションリセット
