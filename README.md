@@ -29,6 +29,11 @@
 - **直感的UI**: わかりやすいカードレイアウトとグラデーション
 - **レスポンシブデザイン**: モバイル・デスクトップ両対応
 
+### 🧹 自動データ管理
+- **24時間自動削除**: 古いセッションデータの自動クリーンアップ
+- **ログ管理**: 削除処理の履歴追跡とログ保持（7日間）
+- **定期実行**: 毎日午前2時（UTC）の自動実行
+
 ## 🛠️ 技術スタック
 
 ### フロントエンド
@@ -99,7 +104,20 @@ queue-management-app/
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
 
-3. **GitHubからデプロイ**
+3. **24時間自動削除機能の設定（オプション）**
+   ```bash
+   # 1. SQLファイルをSupabaseで実行
+   # database/cleanup_old_sessions.sql の内容をクエリエディタで実行
+   
+   # 2. Edge Functionをデプロイ
+   supabase functions deploy cleanup-sessions
+   
+   # 3. Cronジョブ設定（Supabaseダッシュボード）
+   # Function: cleanup-sessions
+   # Schedule: 0 2 * * * (毎日午前2時UTC)
+   ```
+
+4. **GitHubからデプロイ**
    ```bash
    git add .
    git commit -m "Deploy queue management app"

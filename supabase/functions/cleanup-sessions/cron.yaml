@@ -1,0 +1,18 @@
+# Supabase Edge Function用のCron設定
+# このファイルはSupabaseダッシュボードでのCron設定時の参考用です
+
+# 毎日午前2時に実行（UTC）
+schedule: "0 2 * * *"
+timezone: "UTC"
+
+# 関数名
+function: cleanup-sessions
+
+# 説明
+description: "Delete sessions and users older than 24 hours"
+
+# リトライ設定
+retry_policy:
+  max_retry_count: 3
+  min_backoff_duration: "1m"
+  max_backoff_duration: "10m"
