@@ -399,23 +399,43 @@
         async function loadConfig() {
             try {
                 console.log('Loading configuration from /api/config...');
-                const response = await fetch('/api/config');
+                console.log('Current URL:', window.location.href);
+                
+                const response = await fetch('/api/config', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    cache: 'no-cache'
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('API response error:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}\nResponse: ${errorText}`);
                 }
+                
                 const config = await response.json();
-                console.log('Configuration loaded successfully');
+                console.log('Configuration loaded successfully:', {
+                    hasUrl: !!config.supabaseUrl,
+                    hasKey: !!config.supabaseKey,
+                    timestamp: config.timestamp
+                });
                 
                 // 設定検証
                 if (!config.supabaseUrl || !config.supabaseKey) {
-                    console.error('Invalid configuration: missing supabaseUrl or supabaseKey');
+                    console.error('Invalid configuration:', config);
+                    alert(`設定が不完全です: URL=${!!config.supabaseUrl}, Key=${!!config.supabaseKey}`);
                     return null;
                 }
                 
                 return config;
             } catch (error) {
                 console.error('Failed to load config:', error);
-                alert('設定の読み込みに失敗しました。環境変数が正しく設定されているか確認してください。');
+                alert(`設定の読み込みに失敗しました:\n${error.message}\n\nVercelの環境変数設定を確認してください。`);
                 return null;
             }
         }
