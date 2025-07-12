@@ -386,6 +386,7 @@
         // アプリケーションの状態管理
         let appState = {
             sessionCode: null,
+            sessionId: null,
             partySize: 5,
             rotationCount: 1,
             party: [],
@@ -459,11 +460,14 @@
             }
             
             try {
+                const masterUser = appState.party.find(user => user.isFixed);
+                const masterName = masterUser ? masterUser.name : '主';
+                
                 const sessionData = {
                     session_code: appState.sessionCode,
+                    master_name: masterName,
                     party_size: appState.partySize,
                     rotation_count: appState.rotationCount,
-                    created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 };
 
@@ -471,7 +475,8 @@
 
                 const { data, error } = await supabase
                     .from('sessions')
-                    .upsert(sessionData, { onConflict: 'session_code' });
+                    .upsert(sessionData, { onConflict: 'session_code' })
+                    .select();
 
                 if (error) {
                     console.error('❌ Error saving session:', error);
@@ -479,6 +484,11 @@
                     return false;
                 } else {
                     console.log('✅ Session saved successfully:', data);
+                    // セッションIDを保存
+                    if (data && data.length > 0) {
+                        appState.sessionId = data[0].id;
+                        console.log('Session ID stored:', appState.sessionId);
+                    }
                     return true;
                 }
             } catch (error) {
@@ -490,17 +500,17 @@
 
         // Supabaseにユーザーデータを保存
         async function saveUsersToSupabase() {
-            if (!supabase) {
-                console.error('Supabase not initialized');
+            if (!supabase || !appState.sessionId) {
+                console.error('Supabase not initialized or session ID missing');
                 return false;
             }
             
             try {
-                console.log('Deleting existing users for session:', appState.sessionCode);
+                console.log('Deleting existing users for session ID:', appState.sessionId);
                 const { error: deleteError } = await supabase
                     .from('session_users')
                     .delete()
-                    .eq('session_code', appState.sessionCode);
+                    .eq('session_id', appState.sessionId);
 
                 if (deleteError) {
                     console.error('❌ Error deleting existing users:', deleteError);
@@ -508,22 +518,20 @@
 
                 const allUsers = [
                     ...appState.party.map((user, index) => ({
-                        session_code: appState.sessionCode,
+                        session_id: appState.sessionId,
                         user_id: user.id,
-                        user_name: user.name,
-                        is_in_party: true,
-                        is_fixed: user.isFixed || false,
-                        position: index,
-                        joined_at: user.joinedAt?.toISOString() || new Date().toISOString()
+                        name: user.name,
+                        position: 'party',
+                        order_index: index,
+                        is_fixed: user.isFixed || false
                     })),
                     ...appState.queue.map((user, index) => ({
-                        session_code: appState.sessionCode,
+                        session_id: appState.sessionId,
                         user_id: user.id,
-                        user_name: user.name,
-                        is_in_party: false,
-                        is_fixed: false,
-                        position: index,
-                        joined_at: user.joinedAt?.toISOString() || new Date().toISOString()
+                        name: user.name,
+                        position: 'queue',
+                        order_index: index,
+                        is_fixed: false
                     }))
                 ];
 
@@ -558,6 +566,8 @@
             if (!supabase) return false;
             
             try {
+                console.log('Loading session from Supabase:', sessionCode);
+                
                 const { data: sessionData, error: sessionError } = await supabase
                     .from('sessions')
                     .select('*')
@@ -569,16 +579,21 @@
                     return false;
                 }
 
+                console.log('Session data loaded:', sessionData);
+                appState.sessionId = sessionData.id;
+
                 const { data: usersData, error: usersError } = await supabase
                     .from('session_users')
                     .select('*')
-                    .eq('session_code', sessionCode)
-                    .order('position');
+                    .eq('session_id', sessionData.id)
+                    .order('position, order_index');
 
                 if (usersError) {
                     console.error('Error loading users:', usersError);
                     return false;
                 }
+
+                console.log('Users data loaded:', usersData);
 
                 appState.partySize = sessionData.party_size;
                 appState.rotationCount = sessionData.rotation_count;
@@ -586,26 +601,27 @@
                 appState.queue = [];
 
                 if (usersData) {
-                    const partyUsers = usersData.filter(user => user.is_in_party);
-                    const queueUsers = usersData.filter(user => !user.is_in_party);
+                    const partyUsers = usersData.filter(user => user.position === 'party');
+                    const queueUsers = usersData.filter(user => user.position === 'queue');
 
                     appState.party = partyUsers.map(user => ({
                         id: user.user_id,
-                        name: user.user_name,
-                        joinedAt: new Date(user.joined_at),
+                        name: user.name,
+                        joinedAt: new Date(user.created_at),
                         isFixed: user.is_fixed
                     }));
 
                     appState.queue = queueUsers.map(user => ({
                         id: user.user_id,
-                        name: user.user_name,
-                        joinedAt: new Date(user.joined_at)
+                        name: user.name,
+                        joinedAt: new Date(user.created_at)
                     }));
 
                     const maxId = Math.max(0, ...usersData.map(user => user.user_id));
                     appState.userIdCounter = maxId + 1;
                 }
 
+                console.log('Session loaded successfully');
                 return true;
             } catch (error) {
                 console.error('Error loading session:', error);
@@ -615,19 +631,19 @@
 
         // リアルタイム購読の設定
         function setupRealtimeSubscription() {
-            if (!supabase || !appState.sessionCode || appState.isCreator) return;
+            if (!supabase || !appState.sessionId || appState.isCreator) return;
 
-            console.log('Setting up realtime subscription for session:', appState.sessionCode);
+            console.log('Setting up realtime subscription for session ID:', appState.sessionId);
 
             subscription = supabase
-                .channel(`session:${appState.sessionCode}`)
+                .channel(`session:${appState.sessionId}`)
                 .on(
                     'postgres_changes',
                     {
                         event: '*',
                         schema: 'public',
                         table: 'session_users',
-                        filter: `session_code=eq.${appState.sessionCode}`
+                        filter: `session_id=eq.${appState.sessionId}`
                     },
                     async (payload) => {
                         console.log('Realtime update (session_users):', payload);
@@ -641,7 +657,7 @@
                         event: '*',
                         schema: 'public',
                         table: 'sessions',
-                        filter: `session_code=eq.${appState.sessionCode}`
+                        filter: `id=eq.${appState.sessionId}`
                     },
                     async (payload) => {
                         console.log('Realtime update (sessions):', payload);
