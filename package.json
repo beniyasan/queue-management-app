@@ -1,13 +1,14 @@
 {
   "name": "queue-management-app",
   "version": "1.0.0",
-  "description": "順番待ち管理アプリ",
-  "main": "index.html",
+  "description": "順番待ち管理アプリ（Supabase統合版）",
   "scripts": {
-    "dev": "npx http-server",
-    "build": "echo 'No build step required'"
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'",
+    "start": "vercel dev"
   },
-  "keywords": ["queue", "management", "webapp"],
-  "author": "Your Name",
+  "dependencies": {},
+  "keywords": ["queue", "management", "webapp", "supabase", "realtime"],
+  "author": "beniyasan",
   "license": "MIT"
 }

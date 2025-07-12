@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>順番待ち管理アプリ</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -377,6 +378,10 @@
     </div>
 
     <script>
+        // Supabase関連
+        let supabase = null;
+        let subscription = null;
+
         // アプリケーションの状態管理
         let appState = {
             sessionCode: null,
@@ -388,8 +393,198 @@
             userIdCounter: 1
         };
 
+        // 環境変数から設定を取得
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                return config;
+            } catch (error) {
+                console.error('Failed to load config:', error);
+                return null;
+            }
+        }
+
+        // Supabase初期化
+        async function initSupabase() {
+            const config = await loadConfig();
+            if (!config || !config.supabaseUrl || !config.supabaseKey) {
+                console.error('Supabase configuration not found');
+                return false;
+            }
+            
+            supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
+            return true;
+        }
+
+        // Supabaseにセッションデータを保存
+        async function saveSessionToSupabase() {
+            if (!supabase) return;
+            
+            try {
+                const sessionData = {
+                    session_code: appState.sessionCode,
+                    party_size: appState.partySize,
+                    rotation_count: appState.rotationCount,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+
+                const { error } = await supabase
+                    .from('sessions')
+                    .upsert(sessionData, { onConflict: 'session_code' });
+
+                if (error) {
+                    console.error('Error saving session:', error);
+                }
+            } catch (error) {
+                console.error('Error saving session:', error);
+            }
+        }
+
+        // Supabaseにユーザーデータを保存
+        async function saveUsersToSupabase() {
+            if (!supabase) return;
+            
+            try {
+                await supabase
+                    .from('session_users')
+                    .delete()
+                    .eq('session_code', appState.sessionCode);
+
+                const allUsers = [
+                    ...appState.party.map((user, index) => ({
+                        session_code: appState.sessionCode,
+                        user_id: user.id,
+                        user_name: user.name,
+                        is_in_party: true,
+                        is_fixed: user.isFixed || false,
+                        position: index,
+                        joined_at: user.joinedAt?.toISOString() || new Date().toISOString()
+                    })),
+                    ...appState.queue.map((user, index) => ({
+                        session_code: appState.sessionCode,
+                        user_id: user.id,
+                        user_name: user.name,
+                        is_in_party: false,
+                        is_fixed: false,
+                        position: index,
+                        joined_at: user.joinedAt?.toISOString() || new Date().toISOString()
+                    }))
+                ];
+
+                if (allUsers.length > 0) {
+                    const { error } = await supabase
+                        .from('session_users')
+                        .insert(allUsers);
+
+                    if (error) {
+                        console.error('Error saving users:', error);
+                    }
+                }
+            } catch (error) {
+                console.error('Error saving users:', error);
+            }
+        }
+
+        // Supabaseからセッションデータを読み込み
+        async function loadSessionFromSupabase(sessionCode) {
+            if (!supabase) return false;
+            
+            try {
+                const { data: sessionData, error: sessionError } = await supabase
+                    .from('sessions')
+                    .select('*')
+                    .eq('session_code', sessionCode)
+                    .single();
+
+                if (sessionError || !sessionData) {
+                    console.error('Session not found:', sessionError);
+                    return false;
+                }
+
+                const { data: usersData, error: usersError } = await supabase
+                    .from('session_users')
+                    .select('*')
+                    .eq('session_code', sessionCode)
+                    .order('position');
+
+                if (usersError) {
+                    console.error('Error loading users:', usersError);
+                    return false;
+                }
+
+                appState.partySize = sessionData.party_size;
+                appState.rotationCount = sessionData.rotation_count;
+                appState.party = [];
+                appState.queue = [];
+
+                if (usersData) {
+                    const partyUsers = usersData.filter(user => user.is_in_party);
+                    const queueUsers = usersData.filter(user => !user.is_in_party);
+
+                    appState.party = partyUsers.map(user => ({
+                        id: user.user_id,
+                        name: user.user_name,
+                        joinedAt: new Date(user.joined_at),
+                        isFixed: user.is_fixed
+                    }));
+
+                    appState.queue = queueUsers.map(user => ({
+                        id: user.user_id,
+                        name: user.user_name,
+                        joinedAt: new Date(user.joined_at)
+                    }));
+
+                    const maxId = Math.max(0, ...usersData.map(user => user.user_id));
+                    appState.userIdCounter = maxId + 1;
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Error loading session:', error);
+                return false;
+            }
+        }
+
+        // リアルタイム購読の設定
+        function setupRealtimeSubscription() {
+            if (!supabase || !appState.sessionCode || appState.isCreator) return;
+
+            subscription = supabase
+                .channel(`session:${appState.sessionCode}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'session_users',
+                        filter: `session_code=eq.${appState.sessionCode}`
+                    },
+                    async (payload) => {
+                        console.log('Realtime update:', payload);
+                        await loadSessionFromSupabase(appState.sessionCode);
+                        updateDisplay();
+                    }
+                )
+                .subscribe();
+        }
+
+        // リアルタイム購読の停止
+        function unsubscribeRealtime() {
+            if (subscription) {
+                supabase.removeChannel(subscription);
+                subscription = null;
+            }
+        }
+
         // セッション開始
-        function startSession() {
+        async function startSession() {
+            if (!supabase && !(await initSupabase())) {
+                alert('Supabaseの初期化に失敗しました。');
+                return;
+            }
+
             const partySize = parseInt(document.getElementById('partySize').value);
             const rotationCount = parseInt(document.getElementById('rotationCount').value);
             const masterNameInput = document.getElementById('masterName').value.trim();
@@ -408,6 +603,10 @@
                 isFixed: true
             };
             appState.party.push(masterUser);
+            
+            // Supabaseに保存
+            await saveSessionToSupabase();
+            await saveUsersToSupabase();
             
             // URLを更新
             updateUrl();
@@ -471,7 +670,7 @@
         }
 
         // ユーザー追加
-        function addUser() {
+        async function addUser() {
             const nameInput = document.getElementById('newUserName');
             const name = nameInput.value.trim();
             
@@ -492,12 +691,15 @@
                 appState.queue.push(user);
             }
             
+            // Supabaseに保存
+            await saveUsersToSupabase();
+            
             nameInput.value = '';
             updateDisplay();
         }
 
         // 次の交代を実行
-        function nextRotation() {
+        async function nextRotation() {
             if (appState.party.length === 0) {
                 alert('パーティーにユーザーがいません');
                 return;
@@ -526,11 +728,14 @@
             const newPartyMembers = appState.queue.splice(0, availableSlots);
             appState.party.push(...newPartyMembers);
             
+            // Supabaseに保存
+            await saveUsersToSupabase();
+            
             updateDisplay();
         }
 
         // ユーザー削除
-        function removeUser(id, fromParty) {
+        async function removeUser(id, fromParty) {
             if (id === 0) {
                 const masterUser = appState.party.find(user => user.id === 0);
                 const masterName = masterUser ? masterUser.name : '主ユーザー';
@@ -545,6 +750,9 @@
             } else {
                 appState.queue = appState.queue.filter(user => user.id !== id);
             }
+            
+            // Supabaseに保存
+            await saveUsersToSupabase();
             
             updateDisplay();
         }
@@ -691,12 +899,16 @@
         }
 
         // セッションリセット
-        function resetSession() {
+        async function resetSession() {
             if (confirm('セッションをリセットしますか？すべてのデータが削除されます。')) {
                 const masterUser = appState.party.find(user => user.isFixed);
                 appState.party = masterUser ? [masterUser] : [];
                 appState.queue = [];
                 appState.userIdCounter = 1;
+                
+                // Supabaseに保存
+                await saveUsersToSupabase();
+                
                 updateDisplay();
             }
         }
@@ -723,20 +935,33 @@
         });
 
         // URL パラメータをチェックして初期化
-        function initializeFromUrl() {
+        async function initializeFromUrl() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const sessionCode = urlParams.get('session');
                 const isCreator = urlParams.get('creator') === 'true';
                 
                 if (sessionCode) {
+                    if (!supabase && !(await initSupabase())) {
+                        alert('Supabaseの初期化に失敗しました。');
+                        return;
+                    }
+
                     appState.sessionCode = sessionCode;
                     appState.isCreator = isCreator;
+                    
+                    // Supabaseからセッションデータを読み込み
+                    const loaded = await loadSessionFromSupabase(sessionCode);
+                    if (!loaded) {
+                        alert('セッションが見つかりません。');
+                        return;
+                    }
                     
                     if (isCreator) {
                         showManagementSection();
                     } else {
                         showViewSection();
+                        setupRealtimeSubscription();
                     }
                     
                     updateDisplay();
@@ -749,6 +974,11 @@
         // ページ読み込み時の初期化
         document.addEventListener('DOMContentLoaded', function() {
             initializeFromUrl();
+        });
+
+        // ページを閉じる際のクリーンアップ
+        window.addEventListener('beforeunload', function() {
+            unsubscribeRealtime();
         });
     </script>
 </body>
