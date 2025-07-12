@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>順番待ち管理アプリ</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/config.js"></script>
     <style>
         * {
             margin: 0;
@@ -395,47 +396,42 @@
             userIdCounter: 1
         };
 
-        // 環境変数から設定を取得
+        // 環境変数から設定を取得（静的ファイル方式）
         async function loadConfig() {
             try {
-                console.log('Loading configuration from /api/config...');
-                console.log('Current URL:', window.location.href);
+                console.log('Loading configuration from static file...');
                 
-                const response = await fetch('/api/config', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    cache: 'no-cache'
-                });
-                
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('API response error:', errorText);
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}\nResponse: ${errorText}`);
+                // 静的ファイルから設定を取得
+                if (!window.APP_CONFIG) {
+                    throw new Error('APP_CONFIG not found. Build script may have failed.');
                 }
                 
-                const config = await response.json();
+                const config = {
+                    supabaseUrl: window.APP_CONFIG.supabaseUrl,
+                    supabaseKey: window.APP_CONFIG.supabaseKey
+                };
+                
                 console.log('Configuration loaded successfully:', {
-                    hasUrl: !!config.supabaseUrl,
-                    hasKey: !!config.supabaseKey,
-                    timestamp: config.timestamp
+                    hasUrl: !!config.supabaseUrl && config.supabaseUrl !== '{{ SUPABASE_URL }}',
+                    hasKey: !!config.supabaseKey && config.supabaseKey !== '{{ SUPABASE_ANON_KEY }}',
+                    source: 'static file'
                 });
                 
-                // 設定検証
-                if (!config.supabaseUrl || !config.supabaseKey) {
-                    console.error('Invalid configuration:', config);
-                    alert(`設定が不完全です: URL=${!!config.supabaseUrl}, Key=${!!config.supabaseKey}`);
+                // 設定検証（テンプレート文字列が残っていないかチェック）
+                if (!config.supabaseUrl || 
+                    !config.supabaseKey || 
+                    config.supabaseUrl === '{{ SUPABASE_URL }}' ||
+                    config.supabaseKey === '{{ SUPABASE_ANON_KEY }}') {
+                    
+                    console.error('Invalid configuration - environment variables not replaced:', config);
+                    alert('環境変数が正しく設定されていません。\nVercelの環境変数設定とビルドプロセスを確認してください。');
                     return null;
                 }
                 
                 return config;
             } catch (error) {
                 console.error('Failed to load config:', error);
-                alert(`設定の読み込みに失敗しました:\n${error.message}\n\nVercelの環境変数設定を確認してください。`);
+                alert(`設定の読み込みに失敗しました:\n${error.message}`);
                 return null;
             }
         }
