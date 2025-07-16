@@ -1988,7 +1988,7 @@
             }
         }
         
-        // 管理者向けリアルタイム購読（全テーブル監視用）
+        // 管理者向けリアルタイム購読（session_usersとsessionsのみ）
         function setupCreatorRealtimeSubscription() {
             if (!supabase || !appState.sessionId || !appState.isCreator) {
                 console.log('❌ setupCreatorRealtimeSubscription: Missing requirements', {
@@ -1999,7 +1999,7 @@
                 return;
             }
 
-            console.log('🚀 Setting up creator realtime subscription for all tables', {
+            console.log('🚀 Setting up creator realtime subscription for session tables', {
                 sessionId: appState.sessionId,
                 channelName: `creator_session:${appState.sessionId}`
             });
@@ -2034,24 +2034,6 @@
                         updateDisplay();
                     }
                 )
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'pending_registrations',
-                        filter: `session_id=eq.${appState.sessionId}`
-                    },
-                    async (payload) => {
-                        console.log('🔔 Realtime update (pending_registrations):', payload);
-                        console.log('📊 Current appState before reload:', {
-                            sessionId: appState.sessionId,
-                            isCreator: appState.isCreator,
-                            pendingCount: appState.pendingRegistrations.length
-                        });
-                        await loadPendingRegistrations();
-                    }
-                )
                 .subscribe((status) => {
                     console.log('Creator realtime subscription status:', status);
                     updateConnectionStatus(status);
@@ -2059,16 +2041,50 @@
                         console.log('✅ Successfully subscribed to creator realtime updates');
                     } else if (status === 'CHANNEL_ERROR') {
                         console.error('❌ Creator realtime subscription error');
-                        // リトライ機能
-                        setTimeout(() => {
-                            console.log('Retrying creator realtime subscription...');
-                            unsubscribeRealtime();
-                            setupCreatorRealtimeSubscription();
-                        }, 5000);
+                        // 3回までリトライ
+                        if (!appState.retryCount) appState.retryCount = 0;
+                        if (appState.retryCount < 3) {
+                            appState.retryCount++;
+                            setTimeout(() => {
+                                console.log(`Retrying creator realtime subscription (attempt ${appState.retryCount})...`);
+                                unsubscribeRealtime();
+                                setupCreatorRealtimeSubscription();
+                            }, 5000);
+                        } else {
+                            console.log('❌ Max retries reached, falling back to polling');
+                            setupPendingRegistrationsPolling();
+                        }
                     } else if (status === 'CLOSED') {
                         console.log('🔒 Creator realtime subscription closed');
                     }
                 });
+        }
+
+        // 保留申請用のポーリング機能（リアルタイム購読の代替）
+        let pendingRegistrationsPollingInterval = null;
+        
+        function setupPendingRegistrationsPolling() {
+            if (!appState.isCreator || pendingRegistrationsPollingInterval) return;
+            
+            console.log('🔄 Setting up pending registrations polling');
+            
+            // 初回ロード
+            loadPendingRegistrations();
+            
+            // 5秒ごとにポーリング
+            pendingRegistrationsPollingInterval = setInterval(() => {
+                if (appState.isCreator && appState.approvalRequired) {
+                    loadPendingRegistrations();
+                }
+            }, 5000);
+        }
+        
+        function stopPendingRegistrationsPolling() {
+            if (pendingRegistrationsPollingInterval) {
+                clearInterval(pendingRegistrationsPollingInterval);
+                pendingRegistrationsPollingInterval = null;
+                console.log('⏹️ Stopped pending registrations polling');
+            }
         }
 
         // 表示更新時に承認関連も更新するよう既存のupdateDisplay関数を拡張
@@ -2198,18 +2214,23 @@
             });
         };
 
-        // 管理セクション表示時にリアルタイム購読と初期データロードも設定するよう拡張
+        // 管理セクション表示時にリアルタイム購読とポーリングを設定するよう拡張
         const originalShowManagementSection = showManagementSection;
         showManagementSection = function() {
             originalShowManagementSection();
             if (appState.isCreator) {
                 console.log('🚀 showManagementSection: Setting up creator features');
                 setupCreatorRealtimeSubscription();
-                // 初期ロード時に保留申請も読み込む
-                setTimeout(() => {
-                    loadPendingRegistrations();
-                }, 1000); // 少し遅延を入れてリアルタイム購読が確立されてから
+                // ポーリングも並行して開始（リアルタイム購読の補完）
+                setupPendingRegistrationsPolling();
             }
+        };
+
+        // 既存のbeforeunloadイベントにポーリング停止を追加
+        const originalUnsubscribeRealtime = unsubscribeRealtime;
+        unsubscribeRealtime = function() {
+            stopPendingRegistrationsPolling();
+            originalUnsubscribeRealtime();
         };
     </script>
 </body>
