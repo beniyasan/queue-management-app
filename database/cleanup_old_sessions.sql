@@ -75,6 +75,17 @@ BEGIN
     END IF;
 END $$;
 
+-- sessions テーブルに管理者トークンフィールドを追加
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'sessions' AND column_name = 'creator_token'
+    ) THEN
+        ALTER TABLE sessions ADD COLUMN creator_token VARCHAR(8);
+    END IF;
+END $$;
+
 -- 参加申請テーブルを作成
 CREATE TABLE IF NOT EXISTS pending_registrations (
     id SERIAL PRIMARY KEY,

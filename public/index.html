@@ -703,7 +703,8 @@
             pendingRegistrations: [],
             userRegistrationStatus: null, // 'pending', 'approved', 'rejected', null
             userRegistrationName: null, // 申請時の名前を保存
-            isLoadingPendingRegistrations: false // 重複読み込み防止
+            isLoadingPendingRegistrations: false, // 重複読み込み防止
+            creatorToken: null // 管理者用ランダムトークン
         };
 
         // 環境変数から設定を取得（静的ファイル方式）
@@ -826,6 +827,7 @@
                     party_size: appState.partySize,
                     rotation_count: appState.rotationCount,
                     approval_required: appState.approvalRequired,
+                    creator_token: appState.creatorToken,
                     updated_at: new Date().toISOString()
                 };
 
@@ -956,6 +958,7 @@
                 appState.partySize = sessionData.party_size;
                 appState.rotationCount = sessionData.rotation_count;
                 appState.approvalRequired = sessionData.approval_required || false;
+                appState.creatorToken = sessionData.creator_token;
                 appState.party = [];
                 appState.queue = [];
                 
@@ -1127,6 +1130,7 @@
             appState.partySize = partySize;
             appState.rotationCount = rotationCount;
             appState.sessionCode = generateSessionCode();
+            appState.creatorToken = generateCreatorToken();
             appState.isCreator = true;
             appState.approvalRequired = approvalRequired;
             
@@ -1172,10 +1176,15 @@
             return Math.random().toString(36).substr(2, 8).toUpperCase();
         }
 
+        // 管理者トークン生成
+        function generateCreatorToken() {
+            return Math.random().toString(36).substr(2, 8).toUpperCase();
+        }
+
         // URLを更新（実際のデプロイ環境で動作）
         function updateUrl() {
             try {
-                const newUrl = `${window.location.origin}${window.location.pathname}?session=${appState.sessionCode}&creator=true`;
+                const newUrl = `${window.location.origin}${window.location.pathname}?session=${appState.sessionCode}&creator=${appState.creatorToken}`;
                 window.history.pushState({}, '', newUrl);
             } catch (error) {
                 console.log('URL update not supported in this environment');
@@ -1186,11 +1195,11 @@
         function updateUrlDisplay() {
             const baseUrl = window.location.origin + window.location.pathname;
             const viewUrl = `${baseUrl}?session=${appState.sessionCode}`;
-            const creatorUrl = `${baseUrl}?session=${appState.sessionCode}&creator=true`;
+            const creatorUrl = `${baseUrl}?session=${appState.sessionCode}&creator=${appState.creatorToken}`;
             
             document.getElementById('shareUrl').value = viewUrl;
             
-            if (appState.isCreator) {
+            if (appState.isCreator && appState.creatorToken) {
                 const creatorUrlElement = document.getElementById('creatorUrl');
                 if (creatorUrlElement) {
                     creatorUrlElement.value = creatorUrl;
@@ -1714,7 +1723,7 @@
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const sessionCode = urlParams.get('session');
-                const isCreator = urlParams.get('creator') === 'true';
+                const creatorParam = urlParams.get('creator');
                 
                 if (sessionCode) {
                     if (!supabase && !(await initSupabase())) {
@@ -1723,7 +1732,6 @@
                     }
 
                     appState.sessionCode = sessionCode;
-                    appState.isCreator = isCreator;
                     
                     // Supabaseからセッションデータを読み込み（申請状況もチェック）
                     const loaded = await loadSessionAndCheckStatus(sessionCode);
@@ -1731,6 +1739,26 @@
                         alert('セッションが見つかりません。');
                         return;
                     }
+                    
+                    // 管理者権限の検証
+                    let isCreator = false;
+                    if (creatorParam) {
+                        if (creatorParam === 'true') {
+                            // 下位互換性のため、古い形式も一時的にサポート
+                            console.warn('⚠️ Using deprecated creator=true format. Please use new secure token format.');
+                            isCreator = true;
+                        } else if (creatorParam === appState.creatorToken) {
+                            // 新しいトークン形式での検証
+                            isCreator = true;
+                            console.log('✅ Creator token verified');
+                        } else {
+                            console.log('❌ Invalid creator token');
+                            alert('無効な管理者権限です。正しい管理者URLを使用してください。');
+                            return;
+                        }
+                    }
+                    
+                    appState.isCreator = isCreator;
                     
                     if (isCreator) {
                         showManagementSection();
