@@ -500,9 +500,16 @@
                 
                 <div class="form-group">
                     <label for="partySize">パーティー人数を選択:</label>
-                    <select id="partySize">
-                        <option value="5">5人パーティー</option>
+                    <select id="partySize" onchange="updateRotationOptions()">
+                        <option value="2">2人パーティー</option>
+                        <option value="3">3人パーティー</option>
+                        <option value="4">4人パーティー</option>
+                        <option value="5" selected>5人パーティー</option>
                         <option value="6">6人パーティー</option>
+                        <option value="7">7人パーティー</option>
+                        <option value="8">8人パーティー</option>
+                        <option value="9">9人パーティー</option>
+                        <option value="10">10人パーティー</option>
                     </select>
                 </div>
 
@@ -556,16 +563,21 @@
                         <div class="setting-group">
                             <label for="currentPartySize">パーティー人数:</label>
                             <select id="currentPartySize" onchange="updatePartySize()">
+                                <option value="2">2人パーティー</option>
+                                <option value="3">3人パーティー</option>
+                                <option value="4">4人パーティー</option>
                                 <option value="5">5人パーティー</option>
                                 <option value="6">6人パーティー</option>
+                                <option value="7">7人パーティー</option>
+                                <option value="8">8人パーティー</option>
+                                <option value="9">9人パーティー</option>
+                                <option value="10">10人パーティー</option>
                             </select>
                         </div>
                         <div class="setting-group">
                             <label for="currentRotationCount">交代人数:</label>
                             <select id="currentRotationCount" onchange="updateRotationCount()">
-                                <option value="1">1人ずつ交代</option>
-                                <option value="2">2人ずつ交代</option>
-                                <option value="3">3人ずつ交代</option>
+                                <!-- 動的に生成される -->
                             </select>
                         </div>
                         <div class="setting-group">
@@ -1556,6 +1568,9 @@
             await saveSessionToSupabase();
             await saveUsersToSupabase();
             
+            // パーティー人数が変更されたので交代人数選択肢を更新
+            updateRotationOptionsForManagement();
+            
             updateDisplay();
         }
 
@@ -1649,6 +1664,9 @@
                 return;
             }
             
+            // 固定ユーザー数が変更されたので交代人数選択肢を更新
+            updateRotationOptionsForManagement();
+            
             updateDisplay();
         }
 
@@ -1669,6 +1687,9 @@
 
         // Enterキーでユーザー追加とセッション開始
         document.addEventListener('DOMContentLoaded', function() {
+            // セットアップ画面の交代人数選択肢を初期化
+            updateRotationOptions('rotationCount');
+            
             const newUserInput = document.getElementById('newUserName');
             if (newUserInput) {
                 newUserInput.addEventListener('keypress', function(e) {
@@ -2314,6 +2335,8 @@
                 // 承認設定の状況表示を初期化
                 setTimeout(() => {
                     initializeApprovalStatusDisplay();
+                    // 管理画面の交代人数選択肢を初期化
+                    updateRotationOptionsForManagement();
                 }, 100);
             }
         };
@@ -2343,6 +2366,63 @@
                 viewerStatusPollingInterval = null;
                 console.log('⏹️ Stopped viewer status polling');
             }
+        }
+
+        // 動的に交代人数の選択肢を更新
+        function updateRotationOptions(selectElementId = 'rotationCount', partySize = null, fixedCount = 0) {
+            const select = document.getElementById(selectElementId);
+            if (!select) return;
+            
+            // パーティー人数を取得
+            if (partySize === null) {
+                const partySizeSelect = document.getElementById(selectElementId === 'rotationCount' ? 'partySize' : 'currentPartySize');
+                partySize = parseInt(partySizeSelect?.value || appState.partySize || 5);
+            }
+            
+            // 固定ユーザー数を取得（管理画面の場合）
+            if (selectElementId === 'currentRotationCount' && appState.party) {
+                fixedCount = appState.party.filter(user => user.isFixed).length;
+            }
+            
+            // 交代可能な最大人数
+            const maxRotation = Math.max(1, partySize - fixedCount);
+            
+            console.log('🔧 Updating rotation options:', { partySize, fixedCount, maxRotation });
+            
+            // 現在の値を保存
+            const currentValue = parseInt(select.value) || 1;
+            
+            // 選択肢をクリア
+            select.innerHTML = '';
+            
+            // 新しい選択肢を生成
+            for (let i = 1; i <= maxRotation; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${i}人ずつ交代`;
+                
+                // 現在の値を維持（範囲内の場合）
+                if (i === Math.min(currentValue, maxRotation)) {
+                    option.selected = true;
+                }
+                
+                select.appendChild(option);
+            }
+            
+            // appStateも更新（管理画面の場合）
+            if (selectElementId === 'currentRotationCount') {
+                appState.rotationCount = Math.min(currentValue, maxRotation);
+            }
+        }
+
+        // セッション作成時の交代人数選択肢更新
+        function updateRotationOptionsForSetup() {
+            updateRotationOptions('rotationCount');
+        }
+
+        // 管理画面の交代人数選択肢更新
+        function updateRotationOptionsForManagement() {
+            updateRotationOptions('currentRotationCount', appState.partySize, appState.party?.filter(user => user.isFixed).length || 0);
         }
 
         // 既存のbeforeunloadイベントにポーリング停止を追加
