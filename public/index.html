@@ -1886,18 +1886,30 @@
 
         // 保留申請表示の更新
         function updatePendingRegistrationsDisplay() {
+            console.log('🎨 updatePendingRegistrationsDisplay called', {
+                isCreator: appState.isCreator,
+                approvalRequired: appState.approvalRequired,
+                pendingCount: appState.pendingRegistrations.length
+            });
+            
             const section = document.getElementById('pendingRegistrationsSection');
             const list = document.getElementById('pendingRegistrationsList');
             
-            if (!section || !list) return;
+            if (!section || !list) {
+                console.log('❌ Section or list element not found', { section: !!section, list: !!list });
+                return;
+            }
             
             // 管理者で承認制が有効な場合のみ表示
             if (appState.isCreator && appState.approvalRequired) {
+                console.log('✅ Showing pending registrations section');
                 section.style.display = 'block';
                 
                 if (appState.pendingRegistrations.length === 0) {
+                    console.log('📝 No pending registrations to display');
                     list.innerHTML = '<p style="color: #666; font-style: italic;">現在、保留中の申請はありません</p>';
                 } else {
+                    console.log(`📝 Displaying ${appState.pendingRegistrations.length} pending registrations`);
                     list.innerHTML = '';
                     appState.pendingRegistrations.forEach(registration => {
                         const item = document.createElement('div');
@@ -1920,6 +1932,10 @@
                     });
                 }
             } else {
+                console.log('❌ Not showing pending registrations section', {
+                    isCreator: appState.isCreator,
+                    approvalRequired: appState.approvalRequired
+                });
                 section.style.display = 'none';
             }
         }
