@@ -688,7 +688,8 @@
             userIdCounter: 1,
             approvalRequired: false,
             pendingRegistrations: [],
-            userRegistrationStatus: null // 'pending', 'approved', 'rejected', null
+            userRegistrationStatus: null, // 'pending', 'approved', 'rejected', null
+            userRegistrationName: null // 申請時の名前を保存
         };
 
         // 環境変数から設定を取得（静的ファイル方式）
@@ -1018,6 +1019,20 @@
                     async (payload) => {
                         console.log('Realtime update (sessions):', payload);
                         await loadSessionFromSupabase(appState.sessionCode);
+                        updateDisplay();
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'pending_registrations',
+                        filter: `session_id=eq.${appState.sessionId}`
+                    },
+                    async (payload) => {
+                        console.log('Realtime update (pending_registrations):', payload);
+                        await checkUserRegistrationStatus();
                         updateDisplay();
                     }
                 )
@@ -1683,8 +1698,8 @@
                     appState.sessionCode = sessionCode;
                     appState.isCreator = isCreator;
                     
-                    // Supabaseからセッションデータを読み込み
-                    const loaded = await loadSessionFromSupabase(sessionCode);
+                    // Supabaseからセッションデータを読み込み（申請状況もチェック）
+                    const loaded = await loadSessionAndCheckStatus(sessionCode);
                     if (!loaded) {
                         alert('セッションが見つかりません。');
                         return;
@@ -1758,6 +1773,8 @@
                 
                 // ユーザーの申請状況を更新
                 appState.userRegistrationStatus = 'pending';
+                appState.userRegistrationName = name;
+                saveRegistrationStatusToStorage();
                 nameInput.value = '';
                 updateRegistrationStatus();
                 
@@ -1914,13 +1931,20 @@
                 form.style.display = 'block';
                 
                 if (appState.userRegistrationStatus === 'pending') {
-                    statusDiv.innerHTML = '<div class="registration-status status-pending">⏳ 申請を送信しました。管理者の承認をお待ちください。</div>';
+                    statusDiv.innerHTML = `<div class="registration-status status-pending">⏳ 申請中: "${appState.userRegistrationName}" として申請を送信しました。管理者の承認をお待ちください。</div>`;
                     inputArea.style.display = 'none';
                 } else if (appState.userRegistrationStatus === 'approved') {
-                    statusDiv.innerHTML = '<div class="registration-status status-approved">✅ 申請が承認されました！パーティー/キューに追加されています。</div>';
+                    const isInPartyOrQueue = appState.party.some(user => user.name === appState.userRegistrationName) ||
+                                           appState.queue.some(user => user.name === appState.userRegistrationName);
+                    
+                    if (isInPartyOrQueue) {
+                        statusDiv.innerHTML = `<div class="registration-status status-approved">✅ 申請が承認されました！"${appState.userRegistrationName}" としてパーティー/キューに追加されています。</div>`;
+                    } else {
+                        statusDiv.innerHTML = `<div class="registration-status status-approved">✅ 申請が承認されました！まもなくパーティー/キューに反映されます。</div>`;
+                    }
                     inputArea.style.display = 'none';
                 } else if (appState.userRegistrationStatus === 'rejected') {
-                    statusDiv.innerHTML = '<div class="registration-status status-rejected">❌ 申請が却下されました。</div>';
+                    statusDiv.innerHTML = `<div class="registration-status status-rejected">❌ 申請が却下されました。再度申請する場合は、別の名前で申請してください。</div>`;
                     inputArea.style.display = 'block';
                 } else {
                     statusDiv.innerHTML = '';
@@ -1931,14 +1955,42 @@
             }
         }
         
-        // 管理者向けリアルタイム購読（保留申請監視用）
+        // 管理者向けリアルタイム購読（全テーブル監視用）
         function setupCreatorRealtimeSubscription() {
             if (!supabase || !appState.sessionId || !appState.isCreator) return;
 
-            console.log('Setting up creator realtime subscription for pending registrations');
+            console.log('Setting up creator realtime subscription for all tables');
 
             subscription = supabase
                 .channel(`creator_session:${appState.sessionId}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'session_users',
+                        filter: `session_id=eq.${appState.sessionId}`
+                    },
+                    async (payload) => {
+                        console.log('Realtime update (session_users):', payload);
+                        await loadSessionFromSupabase(appState.sessionCode);
+                        updateDisplay();
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'sessions',
+                        filter: `id=eq.${appState.sessionId}`
+                    },
+                    async (payload) => {
+                        console.log('Realtime update (sessions):', payload);
+                        await loadSessionFromSupabase(appState.sessionCode);
+                        updateDisplay();
+                    }
+                )
                 .on(
                     'postgres_changes',
                     {
@@ -1954,8 +2006,19 @@
                 )
                 .subscribe((status) => {
                     console.log('Creator realtime subscription status:', status);
+                    updateConnectionStatus(status);
                     if (status === 'SUBSCRIBED') {
-                        console.log('✅ Successfully subscribed to pending registrations updates');
+                        console.log('✅ Successfully subscribed to creator realtime updates');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        console.error('❌ Creator realtime subscription error');
+                        // リトライ機能
+                        setTimeout(() => {
+                            console.log('Retrying creator realtime subscription...');
+                            unsubscribeRealtime();
+                            setupCreatorRealtimeSubscription();
+                        }, 5000);
+                    } else if (status === 'CLOSED') {
+                        console.log('🔒 Creator realtime subscription closed');
                     }
                 });
         }
@@ -1970,12 +2033,113 @@
             }
         };
 
-        // 管理セクション表示時にリアルタイム購読も設定するよう拡張
+        // ユーザーの申請状況をチェック（閲覧者用）
+        async function checkUserRegistrationStatus() {
+            if (!appState.sessionId || appState.isCreator || !appState.userRegistrationName) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('pending_registrations')
+                    .select('status, approved_at')
+                    .eq('session_id', appState.sessionId)
+                    .eq('name', appState.userRegistrationName)
+                    .order('requested_at', { ascending: false })
+                    .limit(1);
+                
+                if (error) {
+                    console.error('Check registration status error:', error);
+                    return;
+                }
+                
+                if (data && data.length > 0) {
+                    const registration = data[0];
+                    const oldStatus = appState.userRegistrationStatus;
+                    appState.userRegistrationStatus = registration.status;
+                    
+                    // 状況が変更された場合はローカルストレージを更新
+                    if (oldStatus !== registration.status) {
+                        saveRegistrationStatusToStorage();
+                        console.log(`Registration status changed: ${oldStatus} -> ${registration.status}`);
+                    }
+                    
+                    // 承認された場合、ユーザーがパーティー/キューに追加されているかチェック
+                    if (registration.status === 'approved') {
+                        const isInPartyOrQueue = appState.party.some(user => user.name === appState.userRegistrationName) ||
+                                               appState.queue.some(user => user.name === appState.userRegistrationName);
+                        
+                        if (isInPartyOrQueue) {
+                            // 承認されてパーティー/キューに追加済み
+                            console.log('User has been approved and added to party/queue');
+                        }
+                    }
+                } else {
+                    // 申請が見つからない場合はリセット
+                    if (appState.userRegistrationStatus !== null) {
+                        appState.userRegistrationStatus = null;
+                        appState.userRegistrationName = null;
+                        // ローカルストレージからも削除
+                        const storageKey = `registration_${appState.sessionCode}`;
+                        localStorage.removeItem(storageKey);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Check registration status exception:', error);
+            }
+        }
+
+        // ローカルストレージから申請状況を復元
+        function loadRegistrationStatusFromStorage() {
+            if (!appState.sessionCode || appState.isCreator) return;
+            
+            const storageKey = `registration_${appState.sessionCode}`;
+            const stored = localStorage.getItem(storageKey);
+            
+            if (stored) {
+                try {
+                    const data = JSON.parse(stored);
+                    appState.userRegistrationName = data.name;
+                    appState.userRegistrationStatus = data.status;
+                    console.log('Restored registration status from storage:', data);
+                } catch (error) {
+                    console.error('Failed to parse stored registration data:', error);
+                    localStorage.removeItem(storageKey);
+                }
+            }
+        }
+
+        // ローカルストレージに申請状況を保存
+        function saveRegistrationStatusToStorage() {
+            if (!appState.sessionCode || appState.isCreator || !appState.userRegistrationName) return;
+            
+            const storageKey = `registration_${appState.sessionCode}`;
+            const data = {
+                name: appState.userRegistrationName,
+                status: appState.userRegistrationStatus,
+                timestamp: new Date().getTime()
+            };
+            
+            localStorage.setItem(storageKey, JSON.stringify(data));
+        }
+
+        // セッション読み込み時に申請状況もチェック
+        async function loadSessionAndCheckStatus(sessionCode) {
+            const success = await loadSessionFromSupabase(sessionCode);
+            if (success && !appState.isCreator) {
+                loadRegistrationStatusFromStorage();
+                await checkUserRegistrationStatus();
+            }
+            return success;
+        }
+
+        // 管理セクション表示時にリアルタイム購読と初期データロードも設定するよう拡張
         const originalShowManagementSection = showManagementSection;
         showManagementSection = function() {
             originalShowManagementSection();
             if (appState.isCreator) {
                 setupCreatorRealtimeSubscription();
+                // 初期ロード時に保留申請も読み込む
+                loadPendingRegistrations();
             }
         };
     </script>
