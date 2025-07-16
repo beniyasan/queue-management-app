@@ -168,6 +168,78 @@
             transform: translateY(-2px);
         }
 
+        .pending-registration-item {
+            background: #fff9e6;
+            border: 1px solid #f7b731;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pending-registration-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .pending-registration-time {
+            font-size: 12px;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        .pending-registration-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-approve {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .btn-reject {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .registration-status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
         .user-name {
             font-weight: 600;
             color: #333;
@@ -443,6 +515,16 @@
                     </select>
                 </div>
 
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="approvalRequired" style="margin-right: 8px;">
+                        参加登録に承認が必要
+                    </label>
+                    <small style="color: #666; font-size: 14px; display: block; margin-top: 5px;">
+                        有効にすると、閲覧者が参加申請を行い、管理者が承認後にパーティー/キューに追加されます
+                    </small>
+                </div>
+
                 <button class="btn" onclick="startSession()">セッション開始</button>
             </div>
 
@@ -486,6 +568,24 @@
                                 <option value="3">3人ずつ交代</option>
                             </select>
                         </div>
+                        <div class="setting-group">
+                            <label>
+                                <input type="checkbox" id="currentApprovalRequired" 
+                                       onchange="updateApprovalSetting()" style="margin-right: 8px;">
+                                参加承認制
+                            </label>
+                            <small style="color: #666; font-size: 12px; display: block; margin-top: 3px;">
+                                閲覧者の参加申請を承認制にする
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 保留申請管理セクション -->
+                <div id="pendingRegistrationsSection" class="settings-panel" style="display: none;">
+                    <h3>🔔 参加申請管理</h3>
+                    <div id="pendingRegistrationsList" class="pending-registrations-list">
+                        <p style="color: #666; font-style: italic;">現在、保留中の申請はありません</p>
                     </div>
                 </div>
 
@@ -528,6 +628,19 @@
             <div id="viewSection" class="management-section hidden">
                 <h2>👀 閲覧専用モード</h2>
                 <p>このセッションは閲覧専用です。リアルタイムで状況を確認できます。</p>
+                
+                <!-- 自己登録フォーム（承認制の場合） -->
+                <div id="selfRegistrationForm" class="settings-panel" style="display: none;">
+                    <h3>🙋‍♂️ 参加申請</h3>
+                    <div id="registrationStatus" style="margin-bottom: 15px;"></div>
+                    <div id="registrationInputArea">
+                        <div class="form-group">
+                            <label for="registrationName">お名前:</label>
+                            <input type="text" id="registrationName" placeholder="参加者名を入力してください">
+                        </div>
+                        <button class="btn" onclick="submitRegistration()">参加申請を送信</button>
+                    </div>
+                </div>
                 
                 <div class="stats">
                     <div class="stat-card">
@@ -572,7 +685,10 @@
             party: [],
             queue: [],
             isCreator: false,
-            userIdCounter: 1
+            userIdCounter: 1,
+            approvalRequired: false,
+            pendingRegistrations: [],
+            userRegistrationStatus: null // 'pending', 'approved', 'rejected', null
         };
 
         // 環境変数から設定を取得（静的ファイル方式）
@@ -694,6 +810,7 @@
                     master_name: masterName,
                     party_size: appState.partySize,
                     rotation_count: appState.rotationCount,
+                    approval_required: appState.approvalRequired,
                     updated_at: new Date().toISOString()
                 };
 
@@ -823,6 +940,7 @@
 
                 appState.partySize = sessionData.party_size;
                 appState.rotationCount = sessionData.rotation_count;
+                appState.approvalRequired = sessionData.approval_required || false;
                 appState.party = [];
                 appState.queue = [];
                 
@@ -831,8 +949,10 @@
                     setTimeout(() => {
                         const partySizeSelect = document.getElementById('currentPartySize');
                         const rotationCountSelect = document.getElementById('currentRotationCount');
+                        const approvalCheckbox = document.getElementById('currentApprovalRequired');
                         if (partySizeSelect) partySizeSelect.value = appState.partySize;
                         if (rotationCountSelect) rotationCountSelect.value = appState.rotationCount;
+                        if (approvalCheckbox) approvalCheckbox.checked = appState.approvalRequired;
                     }, 100);
                 }
 
@@ -969,11 +1089,13 @@
             const rotationCount = parseInt(document.getElementById('rotationCount').value);
             const masterNameInput = document.getElementById('masterName').value.trim();
             const masterName = masterNameInput || '主';
+            const approvalRequired = document.getElementById('approvalRequired').checked;
             
             appState.partySize = partySize;
             appState.rotationCount = rotationCount;
             appState.sessionCode = generateSessionCode();
             appState.isCreator = true;
+            appState.approvalRequired = approvalRequired;
             
             console.log('Session state:', {
                 sessionCode: appState.sessionCode,
@@ -1591,6 +1713,271 @@
         window.addEventListener('beforeunload', function() {
             unsubscribeRealtime();
         });
+
+        // 承認システム関数
+        
+        // 承認設定の更新
+        async function updateApprovalSetting() {
+            const approvalRequired = document.getElementById('currentApprovalRequired').checked;
+            appState.approvalRequired = approvalRequired;
+            
+            // Supabaseに保存
+            await saveSessionToSupabase();
+            
+            // 承認セクションの表示/非表示を更新
+            updatePendingRegistrationsDisplay();
+        }
+
+        // 参加申請を送信（閲覧者用）
+        async function submitRegistration() {
+            const nameInput = document.getElementById('registrationName');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                alert('お名前を入力してください');
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase
+                    .from('pending_registrations')
+                    .insert([
+                        {
+                            session_id: appState.sessionId,
+                            name: name,
+                            status: 'pending'
+                        }
+                    ])
+                    .select();
+                
+                if (error) {
+                    console.error('Registration submission error:', error);
+                    alert('申請の送信に失敗しました');
+                    return;
+                }
+                
+                // ユーザーの申請状況を更新
+                appState.userRegistrationStatus = 'pending';
+                nameInput.value = '';
+                updateRegistrationStatus();
+                
+            } catch (error) {
+                console.error('Registration submission exception:', error);
+                alert('申請の送信に失敗しました');
+            }
+        }
+
+        // 保留申請を承認
+        async function approveRegistration(registrationId, name) {
+            try {
+                // pending_registrationsの状態を更新
+                const { error: updateError } = await supabase
+                    .from('pending_registrations')
+                    .update({
+                        status: 'approved',
+                        approved_at: new Date().toISOString()
+                    })
+                    .eq('id', registrationId);
+                
+                if (updateError) {
+                    console.error('Approval update error:', updateError);
+                    alert('承認の更新に失敗しました');
+                    return;
+                }
+                
+                // ユーザーを追加
+                const newUser = {
+                    id: appState.userIdCounter++,
+                    name: name,
+                    joinedAt: new Date(),
+                    isFixed: false
+                };
+                
+                if (appState.party.length < appState.partySize) {
+                    appState.party.push(newUser);
+                } else {
+                    appState.queue.push(newUser);
+                }
+                
+                // Supabaseに保存
+                await saveUsersToSupabase();
+                
+                // 表示を更新
+                updateDisplay();
+                loadPendingRegistrations();
+                
+            } catch (error) {
+                console.error('Approval exception:', error);
+                alert('承認処理に失敗しました');
+            }
+        }
+
+        // 保留申請を却下
+        async function rejectRegistration(registrationId) {
+            try {
+                const { error } = await supabase
+                    .from('pending_registrations')
+                    .update({
+                        status: 'rejected'
+                    })
+                    .eq('id', registrationId);
+                
+                if (error) {
+                    console.error('Rejection error:', error);
+                    alert('却下の更新に失敗しました');
+                    return;
+                }
+                
+                loadPendingRegistrations();
+                
+            } catch (error) {
+                console.error('Rejection exception:', error);
+                alert('却下処理に失敗しました');
+            }
+        }
+
+        // 保留申請の読み込み
+        async function loadPendingRegistrations() {
+            if (!appState.sessionId) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('pending_registrations')
+                    .select('*')
+                    .eq('session_id', appState.sessionId)
+                    .eq('status', 'pending')
+                    .order('requested_at', { ascending: true });
+                
+                if (error) {
+                    console.error('Load pending registrations error:', error);
+                    return;
+                }
+                
+                appState.pendingRegistrations = data || [];
+                updatePendingRegistrationsDisplay();
+                
+            } catch (error) {
+                console.error('Load pending registrations exception:', error);
+            }
+        }
+
+        // 保留申請表示の更新
+        function updatePendingRegistrationsDisplay() {
+            const section = document.getElementById('pendingRegistrationsSection');
+            const list = document.getElementById('pendingRegistrationsList');
+            
+            if (!section || !list) return;
+            
+            // 管理者で承認制が有効な場合のみ表示
+            if (appState.isCreator && appState.approvalRequired) {
+                section.style.display = 'block';
+                
+                if (appState.pendingRegistrations.length === 0) {
+                    list.innerHTML = '<p style="color: #666; font-style: italic;">現在、保留中の申請はありません</p>';
+                } else {
+                    list.innerHTML = '';
+                    appState.pendingRegistrations.forEach(registration => {
+                        const item = document.createElement('div');
+                        item.className = 'pending-registration-item';
+                        
+                        const requestTime = new Date(registration.requested_at).toLocaleString('ja-JP');
+                        
+                        item.innerHTML = `
+                            <div>
+                                <div class="pending-registration-name">${registration.name}</div>
+                                <div class="pending-registration-time">申請日時: ${requestTime}</div>
+                            </div>
+                            <div class="pending-registration-actions">
+                                <button class="btn-approve" onclick="approveRegistration(${registration.id}, '${registration.name}')">承認</button>
+                                <button class="btn-reject" onclick="rejectRegistration(${registration.id})">却下</button>
+                            </div>
+                        `;
+                        
+                        list.appendChild(item);
+                    });
+                }
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        // 閲覧者の登録状況表示更新
+        function updateRegistrationStatus() {
+            const form = document.getElementById('selfRegistrationForm');
+            const statusDiv = document.getElementById('registrationStatus');
+            const inputArea = document.getElementById('registrationInputArea');
+            
+            if (!form || !statusDiv || !inputArea) return;
+            
+            // 承認制が有効で閲覧者の場合のみ表示
+            if (!appState.isCreator && appState.approvalRequired) {
+                form.style.display = 'block';
+                
+                if (appState.userRegistrationStatus === 'pending') {
+                    statusDiv.innerHTML = '<div class="registration-status status-pending">⏳ 申請を送信しました。管理者の承認をお待ちください。</div>';
+                    inputArea.style.display = 'none';
+                } else if (appState.userRegistrationStatus === 'approved') {
+                    statusDiv.innerHTML = '<div class="registration-status status-approved">✅ 申請が承認されました！パーティー/キューに追加されています。</div>';
+                    inputArea.style.display = 'none';
+                } else if (appState.userRegistrationStatus === 'rejected') {
+                    statusDiv.innerHTML = '<div class="registration-status status-rejected">❌ 申請が却下されました。</div>';
+                    inputArea.style.display = 'block';
+                } else {
+                    statusDiv.innerHTML = '';
+                    inputArea.style.display = 'block';
+                }
+            } else {
+                form.style.display = 'none';
+            }
+        }
+        
+        // 管理者向けリアルタイム購読（保留申請監視用）
+        function setupCreatorRealtimeSubscription() {
+            if (!supabase || !appState.sessionId || !appState.isCreator) return;
+
+            console.log('Setting up creator realtime subscription for pending registrations');
+
+            subscription = supabase
+                .channel(`creator_session:${appState.sessionId}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'pending_registrations',
+                        filter: `session_id=eq.${appState.sessionId}`
+                    },
+                    async (payload) => {
+                        console.log('Realtime update (pending_registrations):', payload);
+                        loadPendingRegistrations();
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('Creator realtime subscription status:', status);
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✅ Successfully subscribed to pending registrations updates');
+                    }
+                });
+        }
+
+        // 表示更新時に承認関連も更新するよう既存のupdateDisplay関数を拡張
+        const originalUpdateDisplay = updateDisplay;
+        updateDisplay = function() {
+            originalUpdateDisplay();
+            updateRegistrationStatus();
+            if (appState.isCreator) {
+                loadPendingRegistrations();
+            }
+        };
+
+        // 管理セクション表示時にリアルタイム購読も設定するよう拡張
+        const originalShowManagementSection = showManagementSection;
+        showManagementSection = function() {
+            originalShowManagementSection();
+            if (appState.isCreator) {
+                setupCreatorRealtimeSubscription();
+            }
+        };
     </script>
 </body>
 </html>

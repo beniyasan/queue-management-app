@@ -21,6 +21,14 @@ BEGIN
     
     GET DIAGNOSTICS user_count = ROW_COUNT;
     
+    -- 24時間を超過したセッションの保留申請も削除
+    WITH old_sessions AS (
+        SELECT id FROM sessions 
+        WHERE created_at < NOW() - INTERVAL '24 hours'
+    )
+    DELETE FROM pending_registrations 
+    WHERE session_id IN (SELECT id FROM old_sessions);
+    
     -- 24時間を超過したセッションを削除
     DELETE FROM sessions 
     WHERE created_at < NOW() - INTERVAL '24 hours';
@@ -53,6 +61,29 @@ CREATE TABLE IF NOT EXISTS cleanup_logs (
     deleted_users INTEGER NOT NULL DEFAULT 0,
     cleanup_timestamp TIMESTAMP DEFAULT NOW(),
     created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 承認機能用のテーブル追加
+-- sessions テーブルに承認機能フラグを追加
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'sessions' AND column_name = 'approval_required'
+    ) THEN
+        ALTER TABLE sessions ADD COLUMN approval_required BOOLEAN DEFAULT false;
+    END IF;
+END $$;
+
+-- 参加申請テーブルを作成
+CREATE TABLE IF NOT EXISTS pending_registrations (
+    id SERIAL PRIMARY KEY,
+    session_id UUID NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    requested_at TIMESTAMP DEFAULT NOW(),
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    approved_at TIMESTAMP NULL,
+    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 
 -- クリーンアップログも7日間で削除する関数
