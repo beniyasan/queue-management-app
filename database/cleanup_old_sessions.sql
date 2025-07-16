@@ -86,6 +86,17 @@ BEGIN
     END IF;
 END $$;
 
+-- sessions テーブルに登録モードフィールドを追加
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'sessions' AND column_name = 'registration_mode'
+    ) THEN
+        ALTER TABLE sessions ADD COLUMN registration_mode VARCHAR(20) DEFAULT 'disabled' CHECK (registration_mode IN ('disabled', 'direct', 'approval'));
+    END IF;
+END $$;
+
 -- 参加申請テーブルを作成
 CREATE TABLE IF NOT EXISTS pending_registrations (
     id SERIAL PRIMARY KEY,
