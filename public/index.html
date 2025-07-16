@@ -1960,22 +1960,37 @@
 
         // 閲覧者の登録状況表示更新
         function updateRegistrationStatus() {
+            console.log('🎨 updateRegistrationStatus called', {
+                isCreator: appState.isCreator,
+                approvalRequired: appState.approvalRequired,
+                userRegistrationStatus: appState.userRegistrationStatus,
+                userRegistrationName: appState.userRegistrationName
+            });
+            
             const form = document.getElementById('selfRegistrationForm');
             const statusDiv = document.getElementById('registrationStatus');
             const inputArea = document.getElementById('registrationInputArea');
             
-            if (!form || !statusDiv || !inputArea) return;
+            if (!form || !statusDiv || !inputArea) {
+                console.log('❌ Registration form elements not found');
+                return;
+            }
             
             // 承認制が有効で閲覧者の場合のみ表示
             if (!appState.isCreator && appState.approvalRequired) {
+                console.log('✅ Showing registration form');
                 form.style.display = 'block';
                 
                 if (appState.userRegistrationStatus === 'pending') {
+                    console.log('📝 Displaying pending status');
                     statusDiv.innerHTML = `<div class="registration-status status-pending">⏳ 申請中: "${appState.userRegistrationName}" として申請を送信しました。管理者の承認をお待ちください。</div>`;
                     inputArea.style.display = 'none';
                 } else if (appState.userRegistrationStatus === 'approved') {
+                    console.log('📝 Displaying approved status');
                     const isInPartyOrQueue = appState.party.some(user => user.name === appState.userRegistrationName) ||
                                            appState.queue.some(user => user.name === appState.userRegistrationName);
+                    
+                    console.log('🔍 Party/Queue check:', { isInPartyOrQueue, partySize: appState.party.length, queueSize: appState.queue.length });
                     
                     if (isInPartyOrQueue) {
                         statusDiv.innerHTML = `<div class="registration-status status-approved">✅ 申請が承認されました！"${appState.userRegistrationName}" としてパーティー/キューに追加されています。</div>`;
@@ -1984,9 +1999,11 @@
                     }
                     inputArea.style.display = 'none';
                 } else if (appState.userRegistrationStatus === 'rejected') {
+                    console.log('📝 Displaying rejected status');
                     statusDiv.innerHTML = `<div class="registration-status status-rejected">❌ 申請が却下されました。再度申請する場合は、別の名前で申請してください。</div>`;
                     inputArea.style.display = 'block';
                 } else {
+                    console.log('📝 Displaying default status (no registration)');
                     statusDiv.innerHTML = '';
                     inputArea.style.display = 'block';
                 }
