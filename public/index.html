@@ -1855,7 +1855,12 @@
 
         // 保留申請の読み込み
         async function loadPendingRegistrations() {
-            if (!appState.sessionId) return;
+            if (!appState.sessionId) {
+                console.log('❌ loadPendingRegistrations: No session ID');
+                return;
+            }
+            
+            console.log('🔍 Loading pending registrations for session:', appState.sessionId);
             
             try {
                 const { data, error } = await supabase
@@ -1866,15 +1871,16 @@
                     .order('requested_at', { ascending: true });
                 
                 if (error) {
-                    console.error('Load pending registrations error:', error);
+                    console.error('❌ Load pending registrations error:', error);
                     return;
                 }
                 
+                console.log('✅ Loaded pending registrations:', data);
                 appState.pendingRegistrations = data || [];
                 updatePendingRegistrationsDisplay();
                 
             } catch (error) {
-                console.error('Load pending registrations exception:', error);
+                console.error('❌ Load pending registrations exception:', error);
             }
         }
 
@@ -1957,9 +1963,19 @@
         
         // 管理者向けリアルタイム購読（全テーブル監視用）
         function setupCreatorRealtimeSubscription() {
-            if (!supabase || !appState.sessionId || !appState.isCreator) return;
+            if (!supabase || !appState.sessionId || !appState.isCreator) {
+                console.log('❌ setupCreatorRealtimeSubscription: Missing requirements', {
+                    supabase: !!supabase,
+                    sessionId: appState.sessionId,
+                    isCreator: appState.isCreator
+                });
+                return;
+            }
 
-            console.log('Setting up creator realtime subscription for all tables');
+            console.log('🚀 Setting up creator realtime subscription for all tables', {
+                sessionId: appState.sessionId,
+                channelName: `creator_session:${appState.sessionId}`
+            });
 
             subscription = supabase
                 .channel(`creator_session:${appState.sessionId}`)
@@ -2000,8 +2016,13 @@
                         filter: `session_id=eq.${appState.sessionId}`
                     },
                     async (payload) => {
-                        console.log('Realtime update (pending_registrations):', payload);
-                        loadPendingRegistrations();
+                        console.log('🔔 Realtime update (pending_registrations):', payload);
+                        console.log('📊 Current appState before reload:', {
+                            sessionId: appState.sessionId,
+                            isCreator: appState.isCreator,
+                            pendingCount: appState.pendingRegistrations.length
+                        });
+                        await loadPendingRegistrations();
                     }
                 )
                 .subscribe((status) => {
@@ -2132,14 +2153,35 @@
             return success;
         }
 
+        // デバッグ用：手動で保留申請をリロード
+        window.debugLoadPendingRegistrations = function() {
+            console.log('🔧 Manual debug load pending registrations');
+            loadPendingRegistrations();
+        };
+
+        // デバッグ用：現在の状態を表示
+        window.debugAppState = function() {
+            console.log('🔧 Current appState:', {
+                sessionId: appState.sessionId,
+                sessionCode: appState.sessionCode,
+                isCreator: appState.isCreator,
+                approvalRequired: appState.approvalRequired,
+                pendingRegistrations: appState.pendingRegistrations,
+                subscription: !!subscription
+            });
+        };
+
         // 管理セクション表示時にリアルタイム購読と初期データロードも設定するよう拡張
         const originalShowManagementSection = showManagementSection;
         showManagementSection = function() {
             originalShowManagementSection();
             if (appState.isCreator) {
+                console.log('🚀 showManagementSection: Setting up creator features');
                 setupCreatorRealtimeSubscription();
                 // 初期ロード時に保留申請も読み込む
-                loadPendingRegistrations();
+                setTimeout(() => {
+                    loadPendingRegistrations();
+                }, 1000); // 少し遅延を入れてリアルタイム購読が確立されてから
             }
         };
     </script>
