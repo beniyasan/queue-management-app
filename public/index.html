@@ -689,7 +689,8 @@
             approvalRequired: false,
             pendingRegistrations: [],
             userRegistrationStatus: null, // 'pending', 'approved', 'rejected', null
-            userRegistrationName: null // 申請時の名前を保存
+            userRegistrationName: null, // 申請時の名前を保存
+            isLoadingPendingRegistrations: false // 重複読み込み防止
         };
 
         // 環境変数から設定を取得（静的ファイル方式）
@@ -1860,6 +1861,12 @@
                 return;
             }
             
+            if (appState.isLoadingPendingRegistrations) {
+                console.log('⏳ loadPendingRegistrations: Already loading, skipping');
+                return;
+            }
+            
+            appState.isLoadingPendingRegistrations = true;
             console.log('🔍 Loading pending registrations for session:', appState.sessionId);
             
             try {
@@ -1872,15 +1879,19 @@
                 
                 if (error) {
                     console.error('❌ Load pending registrations error:', error);
+                    appState.isLoadingPendingRegistrations = false;
                     return;
                 }
                 
                 console.log('✅ Loaded pending registrations:', data);
                 appState.pendingRegistrations = data || [];
+                console.log('📊 Updated appState.pendingRegistrations:', appState.pendingRegistrations);
                 updatePendingRegistrationsDisplay();
                 
             } catch (error) {
                 console.error('❌ Load pending registrations exception:', error);
+            } finally {
+                appState.isLoadingPendingRegistrations = false;
             }
         }
 
