@@ -1312,23 +1312,50 @@
                 return;
             }
             
+            // キューが空の場合はチェック
+            if (appState.queue.length === 0) {
+                alert('キューにユーザーがいないため、交代できません');
+                return;
+            }
+            
             const rotationAmount = Math.min(appState.rotationCount, rotatableUsers.length);
             const rotatingUsers = rotatableUsers.slice(0, rotationAmount);
             
-            console.log('🔄 Rotating users:', rotatingUsers);
+            // 交代可能なキューのユーザー数をチェック
+            const availableReplacements = Math.min(appState.queue.length, rotatingUsers.length);
+            if (availableReplacements === 0) {
+                alert('交代できるユーザーがキューにいません');
+                return;
+            }
             
-            rotatingUsers.forEach(user => {
+            // 実際に交代するユーザー数を調整
+            const actualRotatingUsers = rotatingUsers.slice(0, availableReplacements);
+            
+            console.log('🔄 Rotating users:', actualRotatingUsers);
+            
+            // パーティーから交代ユーザーを削除
+            actualRotatingUsers.forEach(user => {
                 const index = appState.party.indexOf(user);
                 if (index > -1) {
                     appState.party.splice(index, 1);
                 }
             });
             
-            appState.queue.push(...rotatingUsers);
+            // キューから新しいメンバーを取得
+            const newPartyMembers = appState.queue.splice(0, actualRotatingUsers.length);
             
-            const availableSlots = appState.partySize - appState.party.length;
-            const newPartyMembers = appState.queue.splice(0, availableSlots);
+            // 交代したユーザーをキューの最後に追加
+            appState.queue.push(...actualRotatingUsers);
+            
+            // 新しいメンバーをパーティーに追加
             appState.party.push(...newPartyMembers);
+            
+            // パーティー人数が設定値になるように調整
+            const shortage = appState.partySize - appState.party.length;
+            if (shortage > 0 && appState.queue.length > 0) {
+                const additionalMembers = appState.queue.splice(0, Math.min(shortage, appState.queue.length));
+                appState.party.push(...additionalMembers);
+            }
             
             // Supabaseに保存
             const saved = await saveUsersToSupabase();
