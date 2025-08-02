@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>順番待ち管理アプリ</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="./config.js"></script>
     <style>
         * {
@@ -465,6 +466,38 @@
             opacity: 0;
         }
 
+        /* ドラッグ&ドロップ用スタイル */
+        .sortable-item {
+            cursor: move;
+            user-select: none;
+        }
+
+        .sortable-item:hover {
+            cursor: grab;
+        }
+
+        .sortable-item.sortable-drag {
+            opacity: 0.5;
+            transform: rotate(2deg);
+            z-index: 1000;
+        }
+
+        .sortable-item.sortable-ghost {
+            opacity: 0.3;
+            background: #e3f2fd !important;
+        }
+
+        .sortable-item.sortable-chosen {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* ドラッグ中のプレースホルダー */
+        .sortable-fallback {
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            opacity: 0.5;
+        }
+
         @media (max-width: 768px) {
             .queue-container {
                 grid-template-columns: 1fr;
@@ -699,6 +732,9 @@
         let supabase = null;
         let subscription = null;
 
+        // ドラッグ&ドロップ関連
+        let partySortable = null;
+
         // アプリケーションの状態管理
         let appState = {
             sessionCode: null,
@@ -717,6 +753,119 @@
             isLoadingPendingRegistrations: false, // 重複読み込み防止
             creatorToken: null // 管理者用ランダムトークン
         };
+
+        // Sortable初期化
+        function initializePartySortable() {
+            if (!appState.isCreator) return;
+            
+            const partyList = document.getElementById('partyList');
+            if (!partyList) return;
+            
+            // 既存のSortableインスタンスを破棄
+            if (partySortable) {
+                partySortable.destroy();
+                partySortable = null;
+            }
+            
+            // 新しいSortableインスタンスを作成
+            partySortable = new Sortable(partyList, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                handle: '.user-item',
+                onEnd: handlePartyReorder
+            });
+            
+            console.log('✅ Party sortable initialized');
+        }
+
+        // パーティー順番変更ハンドラー
+        async function handlePartyReorder(evt) {
+            const oldIndex = evt.oldIndex;
+            const newIndex = evt.newIndex;
+            
+            console.log(`🔄 Reordering party: ${oldIndex} -> ${newIndex}`);
+            
+            if (oldIndex === newIndex) return;
+            
+            // 配列を更新（楽観的更新）
+            const movedUser = appState.party.splice(oldIndex, 1)[0];
+            appState.party.splice(newIndex, 0, movedUser);
+            
+            // order_indexを再計算
+            appState.party.forEach((user, index) => {
+                user.orderIndex = index;
+            });
+            
+            // UIを即座に更新
+            updateCreatorDisplay();
+            
+            // データベース更新
+            try {
+                await updatePartyOrderInDatabase();
+                console.log('✅ Party order updated successfully');
+            } catch (error) {
+                console.error('❌ Failed to update party order:', error);
+                // エラー時は元に戻す
+                revertPartyOrder(oldIndex, newIndex);
+                alert('順番の更新に失敗しました。元の順番に戻します。');
+            }
+        }
+
+        // エラー時の順番復元
+        function revertPartyOrder(oldIndex, newIndex) {
+            const movedUser = appState.party.splice(newIndex, 1)[0];
+            appState.party.splice(oldIndex, 0, movedUser);
+            
+            // order_indexを再計算
+            appState.party.forEach((user, index) => {
+                user.orderIndex = index;
+            });
+            
+            updateCreatorDisplay();
+        }
+
+        // パーティー順番をデータベースに保存
+        async function updatePartyOrderInDatabase() {
+            if (!supabase || !appState.sessionId) {
+                throw new Error('Supabase not initialized or session ID missing');
+            }
+            
+            // パーティーメンバーの順番情報を更新
+            const updates = appState.party.map((user, index) => ({
+                session_id: appState.sessionId,
+                user_id: user.id,
+                name: user.name,
+                position: 'party',
+                order_index: index,
+                is_fixed: user.isFixed || false
+            }));
+            
+            console.log('💾 Updating party order in database:', updates);
+            
+            // 既存のパーティーメンバーを削除
+            const { error: deleteError } = await supabase
+                .from('session_users')
+                .delete()
+                .eq('session_id', appState.sessionId)
+                .eq('position', 'party');
+            
+            if (deleteError) {
+                throw new Error(`Failed to delete existing party members: ${deleteError.message}`);
+            }
+            
+            // 新しい順番で挿入
+            if (updates.length > 0) {
+                const { error: insertError } = await supabase
+                    .from('session_users')
+                    .insert(updates);
+                
+                if (insertError) {
+                    throw new Error(`Failed to insert updated party order: ${insertError.message}`);
+                }
+            }
+        }
 
         // 環境変数から設定を取得（静的ファイル方式）
         async function loadConfig() {
@@ -1183,6 +1332,13 @@
             
             showManagementSection();
             updateDisplay();
+            
+            // 初期化後にSortableをセットアップ
+            setTimeout(() => {
+                if (appState.isCreator) {
+                    initializePartySortable();
+                }
+            }, 100);
         }
 
         // セッションコード生成
@@ -1420,7 +1576,8 @@
             partyList.innerHTML = '';
             appState.party.forEach((user, index) => {
                 const userDiv = document.createElement('div');
-                userDiv.className = 'user-item';
+                userDiv.className = 'user-item sortable-item';
+                userDiv.setAttribute('data-user-id', user.id);
                 
                 if (user.isFixed) {
                     userDiv.style.background = 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)';
@@ -1461,6 +1618,11 @@
             const nextBtn = document.getElementById('nextBtn');
             const rotatableUsers = appState.party.filter(user => !user.isFixed);
             nextBtn.disabled = rotatableUsers.length === 0;
+            
+            // パーティーリストの描画後にSortableを初期化
+            setTimeout(() => {
+                initializePartySortable();
+            }, 0);
         }
 
         // 閲覧者用表示更新
@@ -1824,6 +1986,13 @@
                     }
                     
                     updateDisplay();
+                    
+                    // 初期化後にSortableをセットアップ
+                    setTimeout(() => {
+                        if (appState.isCreator) {
+                            initializePartySortable();
+                        }
+                    }, 100);
                 }
             } catch (error) {
                 console.log('URL parameter parsing failed:', error);

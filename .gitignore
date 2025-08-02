@@ -1,0 +1,9 @@
+# Claude Code working directory
+cckiro/
+
+# Temporary files
+.claude/
+
+# Article drafts
+ARTICLE_PART2.md
+BLOG_ARTICLE_PART2.md
