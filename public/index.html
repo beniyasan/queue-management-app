@@ -1251,6 +1251,11 @@
             document.getElementById('creatorStatus').textContent = '閲覧者';
         }
 
+        // ユーザー名の重複チェック
+        function isUserNameDuplicate(name) {
+            return [...appState.party, ...appState.queue].some(user => user.name === name);
+        }
+
         // ユーザー追加
         async function addUser() {
             const nameInput = document.getElementById('newUserName');
@@ -1258,6 +1263,12 @@
             
             if (!name) {
                 alert('ユーザー名を入力してください');
+                return;
+            }
+            
+            // 重複チェック
+            if (isUserNameDuplicate(name)) {
+                alert('その名前のユーザーは既に参加しています');
                 return;
             }
             
@@ -1984,8 +1995,7 @@
         // 直接登録処理
         async function addDirectUser(name) {
             // 重複チェック
-            const existingUser = [...appState.party, ...appState.queue].find(user => user.name === name);
-            if (existingUser) {
+            if (isUserNameDuplicate(name)) {
                 alert('その名前のユーザーは既に参加しています');
                 return;
             }
@@ -2058,6 +2068,20 @@
         // 保留申請を承認
         async function approveRegistration(registrationId, name) {
             try {
+                // 重複チェック
+                if (isUserNameDuplicate(name)) {
+                    alert('その名前のユーザーは既に参加しています');
+                    // 既に参加済みの場合は申請を却下扱いに
+                    await supabase
+                        .from('pending_registrations')
+                        .update({
+                            status: 'rejected'
+                        })
+                        .eq('id', registrationId);
+                    loadPendingRegistrations();
+                    return;
+                }
+                
                 // pending_registrationsの状態を更新
                 const { error: updateError } = await supabase
                     .from('pending_registrations')
