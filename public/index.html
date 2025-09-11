@@ -498,6 +498,16 @@
             opacity: 0.5;
         }
 
+        /* 次回ローテーションのハイライト */
+        .highlight-next-in {
+            border: 2px solid #27ae60 !important;
+            box-shadow: 0 0 8px rgba(39, 174, 96, 0.4);
+        }
+        .highlight-next-out {
+            border: 2px solid #e67e22 !important;
+            box-shadow: 0 0 8px rgba(230, 126, 34, 0.4);
+        }
+
         @media (max-width: 768px) {
             .queue-container {
                 grid-template-columns: 1fr;
@@ -734,6 +744,7 @@
 
         // ドラッグ&ドロップ関連
         let partySortable = null;
+        let queueSortable = null;
 
         // アプリケーションの状態管理
         let appState = {
@@ -754,76 +765,127 @@
             creatorToken: null // 管理者用ランダムトークン
         };
 
-        // Sortable初期化
+        // Sortable初期化（パーティー）
         function initializePartySortable() {
             if (!appState.isCreator) return;
-            
             const partyList = document.getElementById('partyList');
             if (!partyList) return;
-            
-            // 既存のSortableインスタンスを破棄
             if (partySortable) {
                 partySortable.destroy();
                 partySortable = null;
             }
-            
-            // 新しいSortableインスタンスを作成
             partySortable = new Sortable(partyList, {
+                group: { name: 'users', pull: true, put: true },
                 animation: 150,
                 ghostClass: 'sortable-ghost',
                 chosenClass: 'sortable-chosen',
                 dragClass: 'sortable-drag',
                 handle: '.user-item',
-                onEnd: handlePartyReorder
+                onMove: canMove,
+                onEnd: handleDndEnd
             });
-            
             console.log('✅ Party sortable initialized');
         }
 
-        // パーティー順番変更ハンドラー
-        async function handlePartyReorder(evt) {
-            const oldIndex = evt.oldIndex;
-            const newIndex = evt.newIndex;
-            
-            console.log(`🔄 Reordering party: ${oldIndex} -> ${newIndex}`);
-            
-            if (oldIndex === newIndex) return;
-            
-            // 配列を更新（楽観的更新）
-            const movedUser = appState.party.splice(oldIndex, 1)[0];
-            appState.party.splice(newIndex, 0, movedUser);
-            
-            // order_indexを再計算
-            appState.party.forEach((user, index) => {
-                user.orderIndex = index;
+        // Sortable初期化（キュー）
+        function initializeQueueSortable() {
+            if (!appState.isCreator) return;
+            const queueList = document.getElementById('queueList');
+            if (!queueList) return;
+            if (queueSortable) {
+                queueSortable.destroy();
+                queueSortable = null;
+            }
+            queueSortable = new Sortable(queueList, {
+                group: { name: 'users', pull: true, put: true },
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                handle: '.user-item',
+                onMove: canMove,
+                onEnd: handleDndEnd
             });
-            
-            // UIを即座に更新
+            console.log('✅ Queue sortable initialized');
+        }
+
+        // DnD 事前制約判定
+        function canMove(evt, originalEvent) {
+            const partyList = document.getElementById('partyList');
+            const queueList = document.getElementById('queueList');
+            const draggedEl = evt.dragged;
+            const userId = Number(draggedEl && draggedEl.getAttribute('data-user-id'));
+            const user = findUser(userId);
+
+            // 固定/主ユーザーはキューへ移動不可
+            if (evt.to === queueList && evt.from === partyList) {
+                if (user && (user.id === 0 || user.isFixed)) {
+                    return false;
+                }
+            }
+            // パーティー満杯時はキュー→パーティー移動不可
+            if (evt.to === partyList && evt.from === queueList) {
+                if (appState.party.length >= appState.partySize) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // DOMから配列を再構成
+        function rebuildFromDom() {
+            const partyList = document.getElementById('partyList');
+            const queueList = document.getElementById('queueList');
+            const byId = {};
+            appState.party.forEach(u => { byId[u.id] = u; });
+            appState.queue.forEach(u => { byId[u.id] = u; });
+            const partyIds = partyList ? Array.from(partyList.children).map(el => Number(el.getAttribute('data-user-id'))).filter(n => Number.isFinite(n)) : [];
+            const queueIds = queueList ? Array.from(queueList.children).map(el => Number(el.getAttribute('data-user-id'))).filter(n => Number.isFinite(n)) : [];
+            appState.party = partyIds.map(id => byId[id]).filter(Boolean);
+            appState.queue = queueIds.map(id => byId[id]).filter(Boolean);
+        }
+
+        // DnD完了時の処理（並び替え/相互移動）
+        async function handleDndEnd(evt) {
+            const partyList = document.getElementById('partyList');
+            const queueList = document.getElementById('queueList');
+            const sameList = evt.from === evt.to;
+            const movedInParty = evt.to === partyList || evt.from === partyList;
+            const movedInQueue = evt.to === queueList || evt.from === queueList;
+
+            // DOMから順序を再構築（楽観的）
+            rebuildFromDom();
             updateCreatorDisplay();
-            
-            // データベース更新
+
             try {
-                await updatePartyOrderInDatabase();
-                console.log('✅ Party order updated successfully');
+                if (sameList) {
+                    if (evt.to === partyList) {
+                        await updatePartyOrderInDatabase();
+                    } else if (evt.to === queueList) {
+                        await updateQueueOrderInDatabase();
+                    }
+                } else {
+                    // 相互移動の場合は両方更新
+                    if (movedInParty) {
+                        await updatePartyOrderInDatabase();
+                    }
+                    if (movedInQueue) {
+                        await updateQueueOrderInDatabase();
+                    }
+                }
+                console.log('✅ DnD changes persisted');
             } catch (error) {
-                console.error('❌ Failed to update party order:', error);
-                // エラー時は元に戻す
-                revertPartyOrder(oldIndex, newIndex);
-                alert('順番の更新に失敗しました。元の順番に戻します。');
+                console.error('❌ Failed to persist DnD changes:', error);
+                alert('順番の更新に失敗しました。最新の状態に更新します。');
+                // サーバー状態を再読込して整合
+                await loadSessionFromSupabase(appState.sessionCode);
+                updateCreatorDisplay();
             }
         }
 
-        // エラー時の順番復元
-        function revertPartyOrder(oldIndex, newIndex) {
-            const movedUser = appState.party.splice(newIndex, 1)[0];
-            appState.party.splice(oldIndex, 0, movedUser);
-            
-            // order_indexを再計算
-            appState.party.forEach((user, index) => {
-                user.orderIndex = index;
-            });
-            
-            updateCreatorDisplay();
+        // ユーザーIDからユーザーを取得
+        function findUser(id) {
+            return appState.party.find(u => u.id === id) || appState.queue.find(u => u.id === id) || null;
         }
 
         // パーティー順番をデータベースに保存
@@ -863,6 +925,38 @@
                 
                 if (insertError) {
                     throw new Error(`Failed to insert updated party order: ${insertError.message}`);
+                }
+            }
+        }
+
+        // キュー順番をデータベースに保存
+        async function updateQueueOrderInDatabase() {
+            if (!supabase || !appState.sessionId) {
+                throw new Error('Supabase not initialized or session ID missing');
+            }
+            const updates = appState.queue.map((user, index) => ({
+                session_id: appState.sessionId,
+                user_id: user.id,
+                name: user.name,
+                position: 'queue',
+                order_index: index,
+                is_fixed: false
+            }));
+            console.log('💾 Updating queue order in database:', updates);
+            const { error: deleteError } = await supabase
+                .from('session_users')
+                .delete()
+                .eq('session_id', appState.sessionId)
+                .eq('position', 'queue');
+            if (deleteError) {
+                throw new Error(`Failed to delete existing queue members: ${deleteError.message}`);
+            }
+            if (updates.length > 0) {
+                const { error: insertError } = await supabase
+                    .from('session_users')
+                    .insert(updates);
+                if (insertError) {
+                    throw new Error(`Failed to insert updated queue order: ${insertError.message}`);
                 }
             }
         }
@@ -1337,6 +1431,7 @@
             setTimeout(() => {
                 if (appState.isCreator) {
                     initializePartySortable();
+                    initializeQueueSortable();
                 }
             }, 100);
         }
@@ -1560,6 +1655,9 @@
             
             // 固定ユーザ数の表示を更新
             updateFixedUserCount();
+
+            // 次回ローテーションのハイライト対象を計算
+            const { nextJoiningIds, nextLeavingIds } = computeRotationPreview();
             
             const partyList = document.getElementById('partyList');
             partyList.innerHTML = '';
@@ -1571,6 +1669,12 @@
                 if (user.isFixed) {
                     userDiv.style.background = 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)';
                     userDiv.style.border = '2px solid #ffd700';
+                }
+
+                // 次に抜ける対象をハイライト
+                if (nextLeavingIds.has(user.id)) {
+                    userDiv.classList.add('highlight-next-out');
+                    userDiv.title = '次に退出（交代）します';
                 }
                 
                 userDiv.innerHTML = `
@@ -1593,7 +1697,14 @@
             queueList.innerHTML = '';
             appState.queue.forEach((user, index) => {
                 const userDiv = document.createElement('div');
-                userDiv.className = 'user-item';
+                userDiv.className = 'user-item sortable-item';
+                userDiv.setAttribute('data-user-id', user.id);
+                
+                // 次に入る対象をハイライト
+                if (nextJoiningIds.has(user.id)) {
+                    userDiv.classList.add('highlight-next-in');
+                    userDiv.title = '次に参加（交代で入ります）';
+                }
                 userDiv.innerHTML = `
                     <div>
                         <span class="user-name">${user.name}</span>
@@ -1608,9 +1719,10 @@
             const rotatableUsers = appState.party.filter(user => !user.isFixed);
             nextBtn.disabled = rotatableUsers.length === 0;
             
-            // パーティーリストの描画後にSortableを初期化
+            // リストの描画後にSortableを初期化
             setTimeout(() => {
                 initializePartySortable();
+                initializeQueueSortable();
             }, 0);
         }
 
@@ -1620,6 +1732,9 @@
             document.getElementById('viewQueueCount').textContent = appState.queue.length;
             document.getElementById('viewTotalCount').textContent = appState.party.length + appState.queue.length;
             
+            // 次回ローテーションのハイライト対象を計算
+            const { nextJoiningIds, nextLeavingIds } = computeRotationPreview();
+
             const partyList = document.getElementById('viewPartyList');
             partyList.innerHTML = '';
             appState.party.forEach((user, index) => {
@@ -1629,6 +1744,11 @@
                 if (user.isFixed) {
                     userDiv.style.background = 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)';
                     userDiv.style.border = '2px solid #ffd700';
+                }
+                
+                if (nextLeavingIds.has(user.id)) {
+                    userDiv.classList.add('highlight-next-out');
+                    userDiv.title = '次に退出（交代）します';
                 }
                 
                 userDiv.innerHTML = `
@@ -1646,6 +1766,10 @@
             appState.queue.forEach((user, index) => {
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
+                if (nextJoiningIds.has(user.id)) {
+                    userDiv.classList.add('highlight-next-in');
+                    userDiv.title = '次に参加（交代で入ります）';
+                }
                 userDiv.innerHTML = `
                     <div>
                         <span class="user-name">${user.name}</span>
@@ -1654,6 +1778,26 @@
                 `;
                 queueList.appendChild(userDiv);
             });
+        }
+
+        // 次回ローテーションのプレビュー計算
+        function computeRotationPreview() {
+            try {
+                const rotatableUsers = appState.party.filter(u => !u.isFixed);
+                const rotationAmount = Math.min(appState.rotationCount, rotatableUsers.length);
+                const availableReplacements = Math.min(appState.queue.length, rotationAmount);
+                if (availableReplacements <= 0) {
+                    return { nextJoiningIds: new Set(), nextLeavingIds: new Set() };
+                }
+                const nextLeaving = rotatableUsers.slice(0, availableReplacements);
+                const nextJoining = appState.queue.slice(0, availableReplacements);
+                const nextLeavingIds = new Set(nextLeaving.map(u => u.id));
+                const nextJoiningIds = new Set(nextJoining.map(u => u.id));
+                return { nextJoiningIds, nextLeavingIds };
+            } catch (e) {
+                console.warn('computeRotationPreview failed:', e);
+                return { nextJoiningIds: new Set(), nextLeavingIds: new Set() };
+            }
         }
 
         // URLをコピー
@@ -1980,6 +2124,7 @@
                     setTimeout(() => {
                         if (appState.isCreator) {
                             initializePartySortable();
+                            initializeQueueSortable();
                         }
                     }, 100);
                 }
