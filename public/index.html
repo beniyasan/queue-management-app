@@ -1114,75 +1114,98 @@
             }
         }
 
-        // Supabaseにユーザーデータを保存
+        // Supabaseにユーザーデータを保存（直列化＋再試行でロスト回避）
         let isSavingUsers = false;
+        let saveQueued = false;
+        let currentSavePromise = null;
         async function saveUsersToSupabase() {
             if (!supabase || !appState.sessionId) {
                 console.error('Supabase not initialized or session ID missing');
                 return false;
             }
+
+            // すでに保存中の場合は完了後に最新状態で再保存をかける
             if (isSavingUsers) {
-                console.log('⏳ saveUsersToSupabase already running. Skipping duplicate call.');
-                return false;
+                console.log('⏳ saveUsersToSupabase in-flight. Queueing a follow-up save.');
+                saveQueued = true;
+                // 現在の保存が終わるのを待つ
+                try { await currentSavePromise; } catch (_) {}
+                // 完了後にループして再保存（最新の appState を保存）
             }
-            
-            try {
+
+            // 直列で保存実行。キューに積まれている間は再度実行して追いつく
+            let result = true;
+            do {
+                saveQueued = false;
                 isSavingUsers = true;
-                console.log('Deleting existing users for session ID:', appState.sessionId);
-                const { error: deleteError } = await supabase
-                    .from('session_users')
-                    .delete()
-                    .eq('session_id', appState.sessionId);
+                currentSavePromise = (async () => {
+                    try {
+                        console.log('Deleting existing users for session ID:', appState.sessionId);
+                        const { error: deleteError } = await supabase
+                            .from('session_users')
+                            .delete()
+                            .eq('session_id', appState.sessionId);
 
-                if (deleteError) {
-                    console.error('❌ Error deleting existing users:', deleteError);
-                }
+                        if (deleteError) {
+                            console.error('❌ Error deleting existing users:', deleteError);
+                            // 続行は可能（後続の insert で上書きされるため）
+                        }
 
-                const allUsers = [
-                    ...appState.party.map((user, index) => ({
-                        session_id: appState.sessionId,
-                        user_id: user.id,
-                        name: user.name,
-                        position: 'party',
-                        order_index: index,
-                        is_fixed: user.isFixed || false
-                    })),
-                    ...appState.queue.map((user, index) => ({
-                        session_id: appState.sessionId,
-                        user_id: user.id,
-                        name: user.name,
-                        position: 'queue',
-                        order_index: index,
-                        is_fixed: false
-                    }))
-                ];
+                        const allUsers = [
+                            ...appState.party.map((user, index) => ({
+                                session_id: appState.sessionId,
+                                user_id: user.id,
+                                name: user.name,
+                                position: 'party',
+                                order_index: index,
+                                is_fixed: user.isFixed || false
+                            })),
+                            ...appState.queue.map((user, index) => ({
+                                session_id: appState.sessionId,
+                                user_id: user.id,
+                                name: user.name,
+                                position: 'queue',
+                                order_index: index,
+                                is_fixed: false
+                            }))
+                        ];
 
-                console.log('Saving users data:', allUsers);
+                        console.log('Saving users data:', allUsers);
 
-                if (allUsers.length > 0) {
-                    const { data, error } = await supabase
-                        .from('session_users')
-                        .insert(allUsers);
+                        if (allUsers.length > 0) {
+                            const { data, error } = await supabase
+                                .from('session_users')
+                                .insert(allUsers);
 
-                    if (error) {
-                        console.error('❌ Error saving users:', error);
-                        alert(`ユーザー保存エラー: ${error.message}`);
+                            if (error) {
+                                console.error('❌ Error saving users:', error);
+                                alert(`ユーザー保存エラー: ${error.message}`);
+                                return false;
+                            } else {
+                                console.log('✅ Users saved successfully:', data);
+                                return true;
+                            }
+                        } else {
+                            console.log('No users to save');
+                            return true;
+                        }
+                    } catch (error) {
+                        console.error('❌ Exception saving users:', error);
+                        alert(`ユーザー保存例外: ${error.message}`);
                         return false;
-                    } else {
-                        console.log('✅ Users saved successfully:', data);
-                        return true;
                     }
-                } else {
-                    console.log('No users to save');
-                    return true;
+                })();
+
+                try {
+                    result = await currentSavePromise;
+                } finally {
+                    isSavingUsers = false;
+                    currentSavePromise = null;
                 }
-            } catch (error) {
-                console.error('❌ Exception saving users:', error);
-                alert(`ユーザー保存例外: ${error.message}`);
-                return false;
-            } finally {
-                isSavingUsers = false;
-            }
+                // もし保存中にさらに変更が入っていれば、最新状態で再実行
+            } while (saveQueued);
+
+            return result;
         }
 
         // Supabaseからセッションデータを読み込み
@@ -1210,7 +1233,8 @@
                     .from('session_users')
                     .select('*')
                     .eq('session_id', sessionData.id)
-                    .order('position, order_index');
+                    .order('position', { ascending: true })
+                    .order('order_index', { ascending: true });
 
                 if (usersError) {
                     console.error('Error loading users:', usersError);

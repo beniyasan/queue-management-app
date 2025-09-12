@@ -199,7 +199,7 @@ async function updatePartySize() {
 }
 ```
 
-## 24時間自動データ削除システムの実装
+## 24時間“非活動”自動データ削除システムの実装（updated_at基準）
 
 ### 1. PostgreSQL関数による削除処理
 
@@ -216,19 +216,19 @@ DECLARE
     session_count INTEGER := 0;
     user_count INTEGER := 0;
 BEGIN
-    -- 24時間を超過したセッションのユーザーを先に削除
+    -- 24時間“非活動”のセッションのユーザーを先に削除（updated_at基準）
     WITH old_sessions AS (
         SELECT id FROM sessions 
-        WHERE created_at < NOW() - INTERVAL '24 hours'
+        WHERE updated_at < NOW() - INTERVAL '24 hours'
     )
     DELETE FROM session_users 
     WHERE session_id IN (SELECT id FROM old_sessions);
     
     GET DIAGNOSTICS user_count = ROW_COUNT;
     
-    -- 24時間を超過したセッションを削除
+    -- 24時間“非活動”のセッションを削除
     DELETE FROM sessions 
-    WHERE created_at < NOW() - INTERVAL '24 hours';
+    WHERE updated_at < NOW() - INTERVAL '24 hours';
     
     GET DIAGNOSTICS session_count = ROW_COUNT;
     
