@@ -89,6 +89,9 @@ function ManagementSettings() {
   const [partySize, setPartySize] = React.useState<number>(5);
   const [rotationCount, setRotationCount] = React.useState<number>(1);
   const [mode, setMode] = React.useState<'disabled'|'direct'|'approval'>('disabled');
+  const initedParty = React.useRef(false);
+  const initedRotation = React.useRef(false);
+  const initedMode = React.useRef(false);
 
   React.useEffect(() => {
     const ps = document.getElementById('currentPartySize') as HTMLSelectElement | null;
@@ -103,21 +106,33 @@ function ManagementSettings() {
     const ps = document.getElementById('currentPartySize') as HTMLSelectElement | null;
     if (ps) {
       ps.value = String(partySize);
-      (window as any).updatePartySize && (window as any).updatePartySize();
+      if (initedParty.current) {
+        (window as any).updatePartySize && (window as any).updatePartySize();
+      } else {
+        initedParty.current = true;
+      }
     }
   }, [partySize]);
   React.useEffect(() => {
     const rc = document.getElementById('currentRotationCount') as HTMLSelectElement | null;
     if (rc) {
       rc.value = String(rotationCount);
-      (window as any).updateRotationCount && (window as any).updateRotationCount();
+      if (initedRotation.current) {
+        (window as any).updateRotationCount && (window as any).updateRotationCount();
+      } else {
+        initedRotation.current = true;
+      }
     }
   }, [rotationCount]);
   React.useEffect(() => {
     const rm = document.getElementById('currentRegistrationMode') as HTMLSelectElement | null;
     if (rm) {
       rm.value = mode;
-      (window as any).updateRegistrationMode && (window as any).updateRegistrationMode();
+      if (initedMode.current) {
+        (window as any).updateRegistrationMode && (window as any).updateRegistrationMode();
+      } else {
+        initedMode.current = true;
+      }
     }
   }, [mode]);
 

@@ -1737,6 +1737,9 @@
             
             // 登録モードの説明文とステータスを初期化
             updateRegistrationModeDisplay();
+
+            // 交代人数の選択肢を現在のパーティー人数/固定数から更新
+            try { updateRotationOptionsForManagement(); } catch(_) {}
             
             updateUrlDisplay();
 
