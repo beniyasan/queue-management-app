@@ -398,6 +398,32 @@
             font-size: 1.2em;
         }
 
+        /* Setup screen layout tuning */
+        #setupSection {
+            padding-top: 8px;
+        }
+        #setupFormMount { /* Atlaskit form island wrapper */
+            max-width: 520px;
+        }
+        #setupSection .form-group { /* native fallback inputs */
+            max-width: 520px;
+        }
+        #setupSection .form-group input,
+        #setupSection .form-group select {
+            max-width: 420px;
+        }
+        #setupSection .setup-actions {
+            max-width: 520px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        #setupSection .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+
         .settings-row {
             display: flex;
             gap: 20px;
@@ -685,7 +711,9 @@
                     </small>
                 </div>
 
-                <button class="btn" onclick="startSession()">セッション開始</button>
+                <div class="setup-actions">
+                    <button class="btn" onclick="startSession()">セッション開始</button>
+                </div>
             </div>
 
             <!-- 管理セクション -->
