@@ -142,7 +142,6 @@ function mountIfPresent(id: string, node: React.ReactNode) {
 
 export function init() {
   mountIfPresent('setupFormMount', <SetupForm />);
-  mountIfPresent('managementSettingsMount', <ManagementSettings />);
 
   // Hide legacy form controls to avoid duplicate UI, but keep them in DOM for compatibility
   try {
@@ -173,6 +172,10 @@ export function init() {
   } catch (e) {
     // no-op
   }
+}
+
+export function mountManagement() {
+  mountIfPresent('managementSettingsMount', <ManagementSettings />);
 }
 
 type User = { id: number; name: string; isFixed?: boolean };
@@ -278,7 +281,7 @@ export function initDnd() {
   root.render(<DndManager />);
 }
 
-(window as any).FormsMount = { init, initDnd };
+(window as any).FormsMount = { init, initDnd, mountManagement };
 
 // Expose init on window for non-module script
 (window as any).FormsMount = { init };

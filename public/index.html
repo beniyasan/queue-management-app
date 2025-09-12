@@ -1244,6 +1244,10 @@
                 console.error('Supabase not initialized');
                 return false;
             }
+            if (!appState.sessionCode) {
+                console.warn('skip saveSessionToSupabase: sessionCode not set yet');
+                return false;
+            }
             
             try {
                 const masterUser = appState.party.find(user => user.isFixed);
@@ -1718,6 +1722,12 @@
             updateRegistrationModeDisplay();
             
             updateUrlDisplay();
+
+            try {
+                if (window && window.FormsMount && window.FormsMount.mountManagement) {
+                    window.FormsMount.mountManagement();
+                }
+            } catch (_) {}
         }
 
         // 閲覧専用セクションを表示
