@@ -304,7 +304,7 @@ function DndManager() {
       {(provided) => (
         <div ref={provided.innerRef} {...provided.droppableProps}>
           {items.map((u, idx) => (
-            <Draggable key={u.id} draggableId={`${id}-${u.id}`} index={idx}>
+            <Draggable key={u.id} draggableId={`${id}-${u.id}`} index={idx} isDragDisabled={id==='party' && !!u.isFixed}>
               {(prov) => (
                 <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps} style={{
                   background: 'var(--ads-color-surface)', border: '1px solid var(--ads-color-border)', borderRadius: 8,
@@ -317,7 +317,47 @@ function DndManager() {
                     {id === 'party' && preview.outIds.has(u.id) ? <span className="lozenge loz-out" style={{ marginLeft: 8 }}>次に退出</span> : null}
                     {id === 'queue' && preview.inIds.has(u.id) ? <span className="lozenge loz-in" style={{ marginLeft: 8 }}>次に参加</span> : null}
                   </span>
-                  <span style={{ color: '#6B778C', fontSize: 12 }}>{id === 'party' ? idx + 1 : `待機${idx + 1}`}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ color: '#6B778C', fontSize: 12 }}>{id === 'party' ? idx + 1 : `待機${idx + 1}`}</span>
+                    {id === 'party' ? (
+                      u.id === 0 ? (
+                        <span className="hint">主（固定）</span>
+                      ) : (
+                        <>
+                          <button
+                            className={`btn ${u.isFixed ? 'btn-warning' : ''}`}
+                            style={{ fontSize: '0.8em', padding: '6px 12px' }}
+                            aria-label={u.isFixed ? '固定解除' : '固定'}
+                            title={u.isFixed ? '固定解除' : '固定'}
+                            onClick={() => { try { (window as any).toggleUserFixed && (window as any).toggleUserFixed(u.id); } catch {} }}
+                          >
+                            {u.isFixed ? '固定解除' : '固定'}
+                          </button>
+                          {!u.isFixed && (
+                            <button
+                              className="btn btn-danger"
+                              style={{ fontSize: '0.8em', padding: '6px 12px' }}
+                              aria-label="削除"
+                              title="削除"
+                              onClick={() => { try { (window as any).removeUser && (window as any).removeUser(u.id, true); } catch {} }}
+                            >
+                              削除
+                            </button>
+                          )}
+                        </>
+                      )
+                    ) : (
+                      <button
+                        className="btn btn-danger"
+                        style={{ fontSize: '0.8em', padding: '6px 12px' }}
+                        aria-label="削除"
+                        title="削除"
+                        onClick={() => { try { (window as any).removeUser && (window as any).removeUser(u.id, false); } catch {} }}
+                      >
+                        削除
+                      </button>
+                    )}
+                  </span>
                 </div>
               )}
             </Draggable>
