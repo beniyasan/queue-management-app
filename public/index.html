@@ -827,6 +827,29 @@
     <div id="ariaAnnouncements" aria-live="polite" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"></div>
 
     <script>
+        // i18n scaffold (ja default)
+        const MESSAGES = {
+            ja: {
+                viewer_hint: 'このセッションは閲覧専用です。リアルタイムで状況を確認できます。',
+                conn_ok: 'リアルタイム接続中',
+                conn_err: '接続エラー（再接続中…）',
+                conn_warn: '接続終了',
+                saving: '保存中…',
+                rotated: '交代完了',
+                rotate_failed: '交代に失敗しました',
+                saved: '保存完了',
+                save_failed: 'ユーザー保存に失敗しました',
+                approve_doing: '承認処理中…',
+                approve_done: '承認しました',
+                approve_failed: '承認処理に失敗しました',
+                reject_doing: '却下処理中…',
+                reject_done: '却下しました',
+                reject_failed: '却下処理に失敗しました',
+            }
+        };
+        let CURRENT_LOCALE = 'ja';
+        function t(key) { try { return (MESSAGES[CURRENT_LOCALE] && MESSAGES[CURRENT_LOCALE][key]) || key; } catch (_) { return key; } }
+        window.setLocale = (loc) => { if (MESSAGES[loc]) CURRENT_LOCALE = loc; };
         // Mount Atlaskit islands if bundle is present
         (function() {
             function tryInit() {
@@ -1542,11 +1565,11 @@
                 if (banner && text) {
                     banner.classList.remove('hidden');
                     let cls = 'warn';
-                    let t = '接続中...';
-                    if (status === 'SUBSCRIBED') { cls = 'ok'; t = t('conn_ok'); }
-                    else if (status === 'CHANNEL_ERROR') { cls = 'err'; t = t('conn_err'); }
-                    else if (status === 'CLOSED') { cls = 'warn'; t = t('conn_warn'); }
-                    text.textContent = t;
+                    let msg = '接続中...';
+                    if (status === 'SUBSCRIBED') { cls = 'ok'; msg = t('conn_ok'); }
+                    else if (status === 'CHANNEL_ERROR') { cls = 'err'; msg = t('conn_err'); }
+                    else if (status === 'CLOSED') { cls = 'warn'; msg = t('conn_warn'); }
+                    text.textContent = msg;
                     const dot = banner.querySelector('.dot');
                     if (dot) { dot.className = `dot ${cls}`; }
                 }
