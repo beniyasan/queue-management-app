@@ -1,6 +1,6 @@
 # 24時間自動削除機能 セットアップガイド
 
-このガイドでは、順番待ち管理アプリで24時間を超過したデータを自動削除する機能の設定方法を説明します。
+このガイドでは、順番待ち管理アプリで24時間「非活動」のデータを自動削除する機能の設定方法を説明します。非活動の判定は`sessions.updated_at`を基準とし、セッションに関連する更新（ユーザーの追加/並び替え/申請など）が発生すると自動的に更新されます。
 
 ## 📋 概要
 
@@ -141,18 +141,18 @@ curl -fsSL https://supabase.com/install.sh | sh
    SELECT * FROM cleanup_logs ORDER BY cleanup_timestamp DESC LIMIT 10;
    ```
 
-2. **古いセッション数を確認**
+2. **古い（非活動）セッション数を確認**
    ```sql
-   -- 24時間を超過したセッション数
+   -- 24時間非活動のセッション数（updated_at基準）
    SELECT COUNT(*) as old_sessions 
    FROM sessions 
-   WHERE created_at < NOW() - INTERVAL '24 hours';
+   WHERE updated_at < NOW() - INTERVAL '24 hours';
    
    -- 対応するユーザー数
    SELECT COUNT(*) as old_users 
    FROM session_users su
    JOIN sessions s ON su.session_id = s.id
-   WHERE s.created_at < NOW() - INTERVAL '24 hours';
+   WHERE s.updated_at < NOW() - INTERVAL '24 hours';
    ```
 
 ## 📊 監視・メンテナンス
@@ -225,10 +225,10 @@ curl -fsSL https://supabase.com/install.sh | sh
 ## 🔧 カスタマイズ
 
 ### 削除期間の変更
-`database/cleanup_old_sessions.sql`で期間を変更：
+`database/migrations/20250912_use_updated_at_for_cleanup_and_triggers.sql`で期間を変更：
 ```sql
 -- 48時間に変更する場合
-WHERE created_at < NOW() - INTERVAL '48 hours'
+WHERE updated_at < NOW() - INTERVAL '48 hours'
 ```
 
 ### 実行頻度の変更

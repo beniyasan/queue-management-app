@@ -747,23 +747,24 @@
         let queueSortable = null;
 
         // アプリケーションの状態管理
-        let appState = {
-            sessionCode: null,
-            sessionId: null,
-            partySize: 5,
-            rotationCount: 1,
-            party: [],
-            queue: [],
-            isCreator: false,
-            userIdCounter: 1,
-            approvalRequired: false, // 下位互換性のため保持
-            registrationMode: 'disabled', // 'disabled', 'direct', 'approval'
-            pendingRegistrations: [],
-            userRegistrationStatus: null, // 'pending', 'approved', 'rejected', null
-            userRegistrationName: null, // 申請時の名前を保存
-            isLoadingPendingRegistrations: false, // 重複読み込み防止
-            creatorToken: null // 管理者用ランダムトークン
-        };
+            let appState = {
+                sessionCode: null,
+                sessionId: null,
+                partySize: 5,
+                rotationCount: 1,
+                party: [],
+                queue: [],
+                isCreator: false,
+                userIdCounter: 1,
+                approvalRequired: false, // 下位互換性のため保持
+                registrationMode: 'disabled', // 'disabled', 'direct', 'approval'
+                pendingRegistrations: [],
+                userRegistrationStatus: null, // 'pending', 'approved', 'rejected', null
+                userRegistrationName: null, // 申請時の名前を保存
+                isLoadingPendingRegistrations: false, // 重複読み込み防止
+                creatorToken: null, // 管理者用ランダムトークン
+                isRotating: false // 交代処理の多重実行防止
+            };
 
         // Sortable初期化（パーティー）
         function initializePartySortable() {
@@ -1113,67 +1114,98 @@
             }
         }
 
-        // Supabaseにユーザーデータを保存
+        // Supabaseにユーザーデータを保存（直列化＋再試行でロスト回避）
+        let isSavingUsers = false;
+        let saveQueued = false;
+        let currentSavePromise = null;
         async function saveUsersToSupabase() {
             if (!supabase || !appState.sessionId) {
                 console.error('Supabase not initialized or session ID missing');
                 return false;
             }
-            
-            try {
-                console.log('Deleting existing users for session ID:', appState.sessionId);
-                const { error: deleteError } = await supabase
-                    .from('session_users')
-                    .delete()
-                    .eq('session_id', appState.sessionId);
 
-                if (deleteError) {
-                    console.error('❌ Error deleting existing users:', deleteError);
-                }
-
-                const allUsers = [
-                    ...appState.party.map((user, index) => ({
-                        session_id: appState.sessionId,
-                        user_id: user.id,
-                        name: user.name,
-                        position: 'party',
-                        order_index: index,
-                        is_fixed: user.isFixed || false
-                    })),
-                    ...appState.queue.map((user, index) => ({
-                        session_id: appState.sessionId,
-                        user_id: user.id,
-                        name: user.name,
-                        position: 'queue',
-                        order_index: index,
-                        is_fixed: false
-                    }))
-                ];
-
-                console.log('Saving users data:', allUsers);
-
-                if (allUsers.length > 0) {
-                    const { data, error } = await supabase
-                        .from('session_users')
-                        .insert(allUsers);
-
-                    if (error) {
-                        console.error('❌ Error saving users:', error);
-                        alert(`ユーザー保存エラー: ${error.message}`);
-                        return false;
-                    } else {
-                        console.log('✅ Users saved successfully:', data);
-                        return true;
-                    }
-                } else {
-                    console.log('No users to save');
-                    return true;
-                }
-            } catch (error) {
-                console.error('❌ Exception saving users:', error);
-                alert(`ユーザー保存例外: ${error.message}`);
-                return false;
+            // すでに保存中の場合は完了後に最新状態で再保存をかける
+            if (isSavingUsers) {
+                console.log('⏳ saveUsersToSupabase in-flight. Queueing a follow-up save.');
+                saveQueued = true;
+                // 現在の保存が終わるのを待つ
+                try { await currentSavePromise; } catch (_) {}
+                // 完了後にループして再保存（最新の appState を保存）
             }
+
+            // 直列で保存実行。キューに積まれている間は再度実行して追いつく
+            let result = true;
+            do {
+                saveQueued = false;
+                isSavingUsers = true;
+                currentSavePromise = (async () => {
+                    try {
+                        console.log('Deleting existing users for session ID:', appState.sessionId);
+                        const { error: deleteError } = await supabase
+                            .from('session_users')
+                            .delete()
+                            .eq('session_id', appState.sessionId);
+
+                        if (deleteError) {
+                            console.error('❌ Error deleting existing users:', deleteError);
+                            // 続行は可能（後続の insert で上書きされるため）
+                        }
+
+                        const allUsers = [
+                            ...appState.party.map((user, index) => ({
+                                session_id: appState.sessionId,
+                                user_id: user.id,
+                                name: user.name,
+                                position: 'party',
+                                order_index: index,
+                                is_fixed: user.isFixed || false
+                            })),
+                            ...appState.queue.map((user, index) => ({
+                                session_id: appState.sessionId,
+                                user_id: user.id,
+                                name: user.name,
+                                position: 'queue',
+                                order_index: index,
+                                is_fixed: false
+                            }))
+                        ];
+
+                        console.log('Saving users data:', allUsers);
+
+                        if (allUsers.length > 0) {
+                            const { data, error } = await supabase
+                                .from('session_users')
+                                .insert(allUsers);
+
+                            if (error) {
+                                console.error('❌ Error saving users:', error);
+                                alert(`ユーザー保存エラー: ${error.message}`);
+                                return false;
+                            } else {
+                                console.log('✅ Users saved successfully:', data);
+                                return true;
+                            }
+                        } else {
+                            console.log('No users to save');
+                            return true;
+                        }
+                    } catch (error) {
+                        console.error('❌ Exception saving users:', error);
+                        alert(`ユーザー保存例外: ${error.message}`);
+                        return false;
+                    }
+                })();
+
+                try {
+                    result = await currentSavePromise;
+                } finally {
+                    isSavingUsers = false;
+                    currentSavePromise = null;
+                }
+                // もし保存中にさらに変更が入っていれば、最新状態で再実行
+            } while (saveQueued);
+
+            return result;
         }
 
         // Supabaseからセッションデータを読み込み
@@ -1201,7 +1233,8 @@
                     .from('session_users')
                     .select('*')
                     .eq('session_id', sessionData.id)
-                    .order('position, order_index');
+                    .order('position', { ascending: true })
+                    .order('order_index', { ascending: true });
 
                 if (usersError) {
                     console.error('Error loading users:', usersError);
@@ -1551,72 +1584,45 @@
 
         // 次の交代を実行
         async function nextRotation() {
-            if (appState.party.length === 0) {
-                alert('パーティーにユーザーがいません');
+            // 多重実行ガード（連打対策）
+            if (appState.isRotating) {
+                console.log('⏳ Rotation in progress. Ignoring duplicate click.');
                 return;
             }
+            appState.isRotating = true;
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) nextBtn.disabled = true;
             
-            const rotatableUsers = appState.party.filter(user => !user.isFixed);
-            
-            if (rotatableUsers.length === 0) {
-                alert('交代可能なユーザーがいません');
-                return;
-            }
-            
-            // キューが空の場合はチェック
-            if (appState.queue.length === 0) {
-                alert('キューにユーザーがいないため、交代できません');
-                return;
-            }
-            
-            const rotationAmount = Math.min(appState.rotationCount, rotatableUsers.length);
-            const rotatingUsers = rotatableUsers.slice(0, rotationAmount);
-            
-            // 交代可能なキューのユーザー数をチェック
-            const availableReplacements = Math.min(appState.queue.length, rotatingUsers.length);
-            if (availableReplacements === 0) {
-                alert('交代できるユーザーがキューにいません');
-                return;
-            }
-            
-            // 実際に交代するユーザー数を調整
-            const actualRotatingUsers = rotatingUsers.slice(0, availableReplacements);
-            
-            console.log('🔄 Rotating users:', actualRotatingUsers);
-            
-            // パーティーから交代ユーザーを削除
-            actualRotatingUsers.forEach(user => {
-                const index = appState.party.indexOf(user);
-                if (index > -1) {
-                    appState.party.splice(index, 1);
+            try {
+                if (!supabase || !appState.sessionCode || !appState.creatorToken) {
+                    alert('セッション情報が不足しています');
+                    return;
                 }
-            });
-            
-            // キューから新しいメンバーを取得
-            const newPartyMembers = appState.queue.splice(0, actualRotatingUsers.length);
-            
-            // 交代したユーザーをキューの最後に追加
-            appState.queue.push(...actualRotatingUsers);
-            
-            // 新しいメンバーをパーティーに追加
-            appState.party.push(...newPartyMembers);
-            
-            // パーティー人数が設定値になるように調整
-            const shortage = appState.partySize - appState.party.length;
-            if (shortage > 0 && appState.queue.length > 0) {
-                const additionalMembers = appState.queue.splice(0, Math.min(shortage, appState.queue.length));
-                appState.party.push(...additionalMembers);
+                // サーバー側RPCで原子的に交代
+                const { data, error } = await supabase.rpc('rotate_session', {
+                    p_session_code: appState.sessionCode,
+                    p_creator_token: appState.creatorToken
+                });
+                if (error) {
+                    console.error('❌ rotate_session RPC error:', error);
+                    if (String(error.message || '').includes('invalid token')) {
+                        alert('管理者トークンが無効です。管理者URLからアクセスしてください。');
+                    } else if (String(error.message || '').includes('session not found')) {
+                        alert('セッションが見つかりません');
+                    } else {
+                        alert('交代処理に失敗しました');
+                    }
+                    return;
+                }
+                console.log('✅ rotate_session result:', data);
+                // DBの状態を再読込
+                await loadSessionFromSupabase(appState.sessionCode);
+                updateDisplay();
+            } finally {
+                appState.isRotating = false;
+                const nextBtn2 = document.getElementById('nextBtn');
+                if (nextBtn2) nextBtn2.disabled = false;
             }
-            
-            // Supabaseに保存
-            const saved = await saveUsersToSupabase();
-            if (!saved) {
-                console.error('❌ Failed to save rotation');
-                alert('交代の保存に失敗しました。');
-                return;
-            }
-            
-            updateDisplay();
         }
 
         // ユーザー削除

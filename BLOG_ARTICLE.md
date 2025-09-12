@@ -90,7 +90,7 @@ subscription = supabase
 - WebSocket ベースで軽量
 - 接続状態も表示できる
 
-### 3. 24時間自動削除システム
+### 3. 24時間“非活動”自動削除システム（updated_at基準）
 
 データが蓄積され続けるのは気持ち悪いので、自動削除機能を実装しました。
 
@@ -100,15 +100,15 @@ CREATE OR REPLACE FUNCTION cleanup_old_sessions()
 RETURNS TABLE(deleted_sessions INTEGER, deleted_users INTEGER, cleanup_timestamp TIMESTAMP)
 AS $$
 BEGIN
-    -- 24時間を超過したデータを削除
+    -- 24時間“非活動”のデータを削除（updated_at基準）
     DELETE FROM session_users 
     WHERE session_id IN (
         SELECT id FROM sessions 
-        WHERE created_at < NOW() - INTERVAL '24 hours'
+        WHERE updated_at < NOW() - INTERVAL '24 hours'
     );
     
     DELETE FROM sessions 
-    WHERE created_at < NOW() - INTERVAL '24 hours';
+    WHERE updated_at < NOW() - INTERVAL '24 hours';
     
     -- 結果をログに記録
     -- ...
