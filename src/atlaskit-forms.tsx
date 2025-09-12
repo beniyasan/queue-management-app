@@ -251,6 +251,25 @@ function DndManager() {
     }
   };
 
+  // compute preview (next in/out)
+  const rotationCount = (() => {
+    try { return (window as any).getAppState ? (window as any).getAppState().rotationCount : 1; } catch { return 1; }
+  })();
+  const preview = React.useMemo(() => {
+    try {
+      const rotatable = party.filter(u => !u.isFixed);
+      const rotationAmount = Math.min(rotationCount || 1, rotatable.length);
+      const available = Math.min(queue.length, rotationAmount);
+      if (available <= 0) return { inIds: new Set<number>(), outIds: new Set<number>() };
+      const nextLeaving = rotatable.slice(0, available);
+      const nextJoining = queue.slice(0, available);
+      return {
+        inIds: new Set<number>(nextJoining.map(u => u.id)),
+        outIds: new Set<number>(nextLeaving.map(u => u.id)),
+      };
+    } catch { return { inIds: new Set<number>(), outIds: new Set<number>() }; }
+  }, [party, queue, rotationCount]);
+
   const renderList = (id: 'party'|'queue', items: User[]) => (
     <Droppable droppableId={id}>
       {(provided) => (
@@ -263,7 +282,12 @@ function DndManager() {
                   padding: 10, marginBottom: 8, boxShadow: 'var(--ads-elevation-shadow)', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   ...prov.draggableProps.style
                 }}>
-                  <span>{u.name}{u.isFixed ? ' 👑' : ''}</span>
+                  <span>
+                    {u.name}{u.isFixed ? ' 👑' : ''}
+                    {u.isFixed ? <span className="lozenge loz-fixed" style={{ marginLeft: 8 }}>固定</span> : null}
+                    {id === 'party' && preview.outIds.has(u.id) ? <span className="lozenge loz-out" style={{ marginLeft: 8 }}>次に退出</span> : null}
+                    {id === 'queue' && preview.inIds.has(u.id) ? <span className="lozenge loz-in" style={{ marginLeft: 8 }}>次に参加</span> : null}
+                  </span>
                   <span style={{ color: '#6B778C', fontSize: 12 }}>{id === 'party' ? idx + 1 : `待機${idx + 1}`}</span>
                 </div>
               )}
@@ -279,9 +303,11 @@ function DndManager() {
     <DragDropContext onDragEnd={onDragEnd}>
       <Inline space="space.200">
         <Box style={{ minWidth: 280 }}>
+          <h3>🎮 パーティー参加者</h3>
           {renderList('party', party)}
         </Box>
         <Box style={{ minWidth: 280 }}>
+          <h3>⏳ キュー待機者</h3>
           {renderList('queue', queue)}
         </Box>
       </Inline>
