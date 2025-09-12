@@ -1,205 +1,91 @@
 # Queue Party
 
-リアルタイム同期機能を備えた、シンプルで使いやすい順番待ち管理Webアプリケーションです。
+リアルタイム同期で「パーティー/待機」の並びを管理できる軽量Webアプリ。
 
-## 🎯 概要
+管理者は参加者の追加/削除/固定/交代を操作でき、閲覧者はリアルタイムに状況を確認できます。UIは Atlassian Design System を参考にしつつ、React Islands（Atlaskit）で段階的に強化しています。
 
-このアプリケーションは、ゲーム待機やイベント参加などの順番待ちを効率的に管理するためのツールです。管理者は参加者の追加・削除・交代を管理でき、閲覧者はリアルタイムで状況を確認できます。
+## 機能ハイライト
+- セッション作成/共有（管理者URLと閲覧URLの分離）
+- 参加者の追加・削除・固定（固定は交代対象外）
+- DnD（react-beautiful-dnd）で並び替え・列移動（固定のドラッグは無効）
+- 次交代プレビュー（次に参加/退出）と交代実行（デフォルト1名、管理で変更可）
+- 承認制の参加申請（保留/承認/却下）
+- Realtime（Supabase）で閲覧者へ即時反映、接続バナー/スケルトン表示
 
-## ✨ 主な機能
+## アーキテクチャ
+- フロントエンド
+  - `public/index.html`（静的ベース + JS）
+  - React Islands: `src/atlaskit-forms.tsx`（Viteで IIFE ビルド → `public/assets/atlaskit-forms.iife.js`）
+  - DnD: `react-beautiful-dnd`
+- データベース（Supabase/Postgres）
+  - テーブル: `sessions`, `session_users`, `pending_registrations`
+  - RPC: `rotate_session(p_session_code, p_creator_token)`, `sync_session_snapshot(p_session_code, p_creator_token, p_party jsonb, p_queue jsonb, ...)`
+  - Realtime: `session_users`/`sessions`/`pending_registrations` を購読して再描画
 
-### 📱 基本機能
-- **セッション管理**: 簡単なコードでセッションを作成・参加
-- **ユーザー管理**: 参加者の追加・削除・順番管理
-- **ドラッグ&ドロップ順番変更**: パーティー参加者の順番を直感的に変更
-- **交代機能**: 1〜3人ずつの柔軟な交代システム
-- **パーティーサイズ**: 5人・6人パーティーに対応
+## セットアップ
+### 必要要件
+- Node.js / pnpm
+- Supabase プロジェクト
 
-### ⚡ リアルタイム機能
-- **リアルタイム同期**: Supabaseを使用した即座のデータ同期
-- **マルチデバイス対応**: 複数デバイスでの同時監視
-- **接続状態表示**: リアルタイム接続の状態を可視化
-
-### 🔐 権限管理
-- **管理者モード**: セッション作成者による完全な管理権限
-- **閲覧専用モード**: 参加者向けのリアルタイム状況確認
-- **URL共有**: 閲覧専用URLと管理者URL（秘匿）の分離
-
-### 📊 統計・表示機能
-- **リアルタイム統計**: パーティー参加者数・待機者数・総参加者数
-- **直感的UI**: わかりやすいカードレイアウトとグラデーション
-- **レスポンシブデザイン**: モバイル・デスクトップ両対応
-
-### 🧹 自動データ管理
-- **24時間自動削除**: 24時間“非活動”のセッションを自動クリーンアップ（updated_at基準、関連更新で自動タッチ）
-- **ログ管理**: 削除処理の履歴追跡とログ保持（7日間）
-- **定期実行**: 毎日午前2時（UTC）の自動実行
-
-## 🛠️ 技術スタック
-
-### フロントエンド
-- **HTML5/CSS3**: モダンなレスポンシブデザイン
-- **Vanilla JavaScript**: 軽量でパフォーマンス重視
-- **SortableJS**: ドラッグ&ドロップ機能ライブラリ
-- **CSS Grid/Flexbox**: 柔軟なレイアウトシステム
-
-### バックエンド・データベース
-- **Supabase**: PostgreSQLベースのBaaS
-  - リアルタイムデータベース
-  - Row Level Security (RLS)
-  - WebSocketによるリアルタイム通信
-- **Vercel**: サーバーレスホスティング・デプロイ
-
-### データ構造
-```sql
--- sessions テーブル
-CREATE TABLE sessions (
-  id SERIAL PRIMARY KEY,
-  session_code VARCHAR(8) UNIQUE NOT NULL,
-  master_name VARCHAR(255) NOT NULL,
-  party_size INTEGER NOT NULL,
-  rotation_count INTEGER NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- session_users テーブル  
-CREATE TABLE session_users (
-  id SERIAL PRIMARY KEY,
-  session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
-  user_id INTEGER NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  position VARCHAR(20) NOT NULL, -- 'party' または 'queue'
-  order_index INTEGER NOT NULL,
-  is_fixed BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT NOW()
-);
+### 環境変数（Vercel など）
 ```
-
-## 🚀 セットアップ・デプロイ
-
-### 必要な環境変数
-```bash
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### プロジェクト構造
+### ビルド/開発
 ```
-queue-management-app/
-├── public/
-│   ├── index.html      # メインアプリケーション
-│   └── config.js       # 環境変数（ビルド時生成）
-├── build.js            # ビルドスクリプト
-├── package.json        # プロジェクト設定
-├── vercel.json         # Vercel設定
-└── README.md           # このファイル
+pnpm install
+pnpm run build     # node build.js && vite build → public/assets に出力
+pnpm dev           # （任意）Vite開発サーバ
 ```
 
-### デプロイ手順
-1. **Supabaseプロジェクト作成**
-   ```sql
-   -- 必要なテーブルとRLSポリシーを設定
-   ```
+build.js が `public/config.js` を生成し、`window.APP_CONFIG` に Supabase 設定を埋め込みます。IIFE バンドルは Islands（Atlaskitフォーム/DnD）を初期化します。
 
-2. **Vercel環境変数設定**
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
+### デプロイ
+- Vercel: `vercel.json` で `pnpm run build` → `public/` を配信
+- 画像アイコン: `public/assets/queue-party-icon.png`（未配置時は `gameicon.png` へフォールバック）
 
-3. **24時間“非活動”自動削除機能の設定（オプション）**
-   ```bash
-   # 1. SQLファイルをSupabaseで実行
-   # database/cleanup_old_sessions.sql の内容をクエリエディタで実行
-   
-   # 2. Edge Functionをデプロイ
-   supabase functions deploy cleanup-sessions
-   
-   # 3. Cronジョブ設定（Supabaseダッシュボード）
-   # Function: cleanup-sessions
-   # Schedule: 0 2 * * * (毎日午前2時UTC)
-   ```
+## 使い方
+### セッション開始（管理者）
+1. 初回画面で「主ユーザー名（任意）」と「パーティー人数」を設定
+2. 交代人数は初期値1（管理画面で変更可）
+3. 「セッション開始」を押すと管理画面に遷移
 
-4. **GitHubからデプロイ**
-   ```bash
-   git add .
-   git commit -m "Deploy queue management app"
-   git push origin main
-   ```
+### 管理画面
+- 参加者追加/削除、固定/固定解除
+- DnD でパーティー/待機の並び替え・列移動（固定のドラッグは無効）
+- 「次へ」で交代を実行（固定を除外し、先頭から指定人数を交代）
+- 設定でパーティー人数/交代人数/参加モード（無効/自由/承認）を変更
 
-4. **自動ビルド・デプロイ**
-   - Vercelが自動的にビルド・デプロイを実行
+### 閲覧画面
+- リアルタイムでパーティー/待機の状況を確認
+- 接続状態バナーとスケルトンで状態を可視化
 
-## 📝 使用方法
+## Supabase モデル（概要）
+```
+sessions(id, session_code, master_name, party_size, rotation_count, creator_token, updated_at, ...)
+session_users(id, session_id, user_id, name, position['party'|'queue'], order_index, is_fixed, created_at)
+pending_registrations(id, session_id, name, status['pending'|'approved'|'rejected'], requested_at, approved_at)
+```
+- RPC `rotate_session` はアドバイザリロックで交代を原子的に処理し、`order_index` を正規化
+- RPC `sync_session_snapshot` はフロントのスナップショットを UPSERT＋削除で反映
 
-### 管理者（セッション作成者）
-1. **セッション開始**
-   - 主ユーザー名を入力（省略可）
-   - パーティーサイズ（5人・6人）を選択
-   - 交代人数（1〜3人）を選択
+## テーマ/ブランド
+- 背景は base.png を元にした多層グラデーション
+- カードは高透過白＋blur＋soft shadow
+- ヘッダーは白背景＋ダークテキスト（ブランドアイコンは `public/assets/queue-party-icon.png`）
+- index.html 冒頭の CSS 変数（tokens相当）で色/角丸/影/余白を調整可能
 
-2. **参加者管理**
-   - ユーザー名を入力して参加者を追加
-   - パーティー参加者とキュー待機者を管理
-   - ドラッグ&ドロップでパーティー参加者の順番を変更
-   - 不要な参加者を削除（主ユーザーは削除不可）
+## トラブルシュート
+- セッション開始で `null.value` エラー → 初回画面から交代人数 UI を削除済、startSession では rotationCount=1 を使用
+- `session_code`/`rotation_count` NOT NULL → 保存時に正規化/ガードを実装済
+- `t is not defined` → i18n スキャフォールドを取り込み済（M6）。古いビルドなら再ビルド
+- 環境変数が反映されない → `pnpm run build` で `public/config.js` を生成できているか確認
 
-3. **交代実行**
-   - 「次へ」ボタンで指定人数ずつ交代
-   - 設定変更で交代人数やパーティーサイズを調整
-
-4. **URL共有**
-   - 閲覧専用URLを参加者に共有
-   - 管理者URLは秘匿して管理者のみ使用
-
-### 閲覧者（参加者）
-1. **セッション参加**
-   - 共有された閲覧専用URLにアクセス
-
-2. **リアルタイム監視**
-   - パーティー状況と待機状況をリアルタイムで確認
-   - 接続状態を画面上で確認
-
-## 🔧 カスタマイズ・拡張
-
-### スタイルカスタマイズ
-- `public/index.html`内のCSSで見た目を調整
-- グラデーション、色合い、レイアウトの変更が可能
-
-### 機能拡張
-- パーティーサイズの選択肢追加
-- 交代ルールのカスタマイズ
-- キュー待機者のドラッグ&ドロップ機能追加
-- 通知機能の追加
-- チャット機能の追加
-
-## 🐛 トラブルシューティング
-
-### よくある問題
-1. **環境変数が読み込めない**
-   - Vercelの環境変数設定を確認
-   - ビルドスクリプトのログを確認
-
-2. **リアルタイム同期が動作しない**
-   - Supabaseのリアルタイム機能設定を確認
-   - ネットワーク接続状態を確認
-
-3. **セッションが見つからない**
-   - セッションコードが正しいか確認
-   - データベースの接続状態を確認
-
-## 📄 ライセンス
-
+## ライセンス
 MIT License
 
-## 👤 作者
-
-beniyasan
-
-## 🔗 リンク
-
-- **GitHub**: https://github.com/beniyasan/queue-management-app
-- **Vercel**: デプロイ済みアプリケーション
-
----
-
-*このアプリケーションは、ゲーム待機やイベント管理を効率化するために開発されました。シンプルな操作でありながら、リアルタイム同期による高度な機能を提供します。*
+## リンク
+- GitHub: https://github.com/beniyasan/queue-management-app
+- デプロイ: Vercel（環境によりURLは異なります）
