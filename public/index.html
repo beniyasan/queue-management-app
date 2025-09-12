@@ -251,6 +251,23 @@
             border: 1px solid #bee5eb;
         }
 
+        /* M3: List item polish + lozenges + focus */
+        .user-list[role="list"] { outline: none; }
+        .user-item[role="listitem"] {
+            border: 1px solid var(--ads-color-border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: var(--ads-color-surface);
+            margin-bottom: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .user-item[role="listitem"]:focus { outline: 2px solid var(--ads-color-info); outline-offset: 2px; }
+        .lozenge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+        .loz-fixed { background: #FFF0B3; color: #533F04; border: 1px solid #FFE380; }
+        .loz-in { background: #E3FCEF; color: #164B35; border: 1px solid #ABF5D1; }
+        .loz-out { background: #FFEBE6; color: #5D1F1A; border: 1px solid #FFBDAD; }
+        .hint { color: #6B778C; font-size: 12px; }
+
         /* Flags (toast-like notifications) */
         .flag-container {
             position: fixed;
@@ -717,11 +734,11 @@
                 <div class="queue-container">
                     <div class="queue-section">
                         <h3>🎮 パーティー参加者</h3>
-                        <div id="partyList" class="user-list"></div>
+                        <div id="partyList" class="user-list" role="list" aria-label="パーティー参加者"></div>
                     </div>
                     <div class="queue-section">
                         <h3>⏳ キュー待機者</h3>
-                        <div id="queueList" class="user-list"></div>
+                        <div id="queueList" class="user-list" role="list" aria-label="キュー待機者"></div>
                     </div>
                 </div>
 
@@ -780,17 +797,18 @@
                 <div class="queue-container">
                     <div class="queue-section">
                         <h3>🎮 パーティー参加者</h3>
-                        <div id="viewPartyList" class="user-list"></div>
+                        <div id="viewPartyList" class="user-list" role="list" aria-label="パーティー参加者"></div>
                     </div>
                     <div class="queue-section">
                         <h3>⏳ キュー待機者</h3>
-                        <div id="viewQueueList" class="user-list"></div>
+                        <div id="viewQueueList" class="user-list" role="list" aria-label="キュー待機者"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     <div id="flagContainer" class="flag-container"></div>
+    <div id="ariaAnnouncements" aria-live="polite" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"></div>
 
     <script>
         // Mount Atlaskit islands if bundle is present
@@ -1782,6 +1800,8 @@
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item sortable-item';
                 userDiv.setAttribute('data-user-id', user.id);
+                userDiv.setAttribute('role', 'listitem');
+                userDiv.setAttribute('tabindex', '0');
                 
                 if (user.isFixed) {
                     userDiv.style.background = 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)';
@@ -1798,12 +1818,14 @@
                     <div>
                         <span class="user-name">${user.name}${user.isFixed ? ' 👑' : ''}</span>
                         <span class="user-number">${index + 1}</span>
+                        ${user.isFixed ? '<span class="lozenge loz-fixed" style="margin-left:8px;">固定</span>' : ''}
+                        ${nextLeavingIds.has(user.id) ? '<span class="lozenge loz-out" style="margin-left:8px;">次に退出</span>' : ''}
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         ${user.id === 0 ? 
-                            '<span style="color: #666; font-size: 0.9em;">主（固定）</span>' : 
-                            `<button class="btn ${user.isFixed ? 'btn-warning' : ''}" onclick="toggleUserFixed(${user.id})" style="font-size: 0.8em; padding: 6px 12px;">${user.isFixed ? '固定解除' : '固定'}</button>
-                            ${!user.isFixed ? `<button class="btn btn-danger" onclick="removeUser(${user.id}, true)" style="font-size: 0.8em; padding: 6px 12px;">削除</button>` : ''}`
+                            '<span class="hint">主（固定）</span>' : 
+                            `<button class="btn ${user.isFixed ? 'btn-warning' : ''}" onclick="toggleUserFixed(${user.id})" aria-label="${user.isFixed ? '固定解除' : '固定'}" title="${user.isFixed ? '固定解除' : '固定'}" style="font-size: 0.8em; padding: 6px 12px;">${user.isFixed ? '固定解除' : '固定'}</button>
+                            ${!user.isFixed ? `<button class=\"btn btn-danger\" onclick=\"removeUser(${user.id}, true)\" aria-label=\"削除\" title=\"削除\" style=\"font-size: 0.8em; padding: 6px 12px;\">削除</button>` : ''}`
                         }
                     </div>
                 `;
@@ -1816,6 +1838,8 @@
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item sortable-item';
                 userDiv.setAttribute('data-user-id', user.id);
+                userDiv.setAttribute('role', 'listitem');
+                userDiv.setAttribute('tabindex', '0');
                 
                 // 次に入る対象をハイライト
                 if (nextJoiningIds.has(user.id)) {
@@ -1826,8 +1850,9 @@
                     <div>
                         <span class="user-name">${user.name}</span>
                         <span class="user-number">待機${index + 1}</span>
+                        ${nextJoiningIds.has(user.id) ? '<span class="lozenge loz-in" style="margin-left:8px;">次に参加</span>' : ''}
                     </div>
-                    <button class="btn btn-danger" onclick="removeUser(${user.id}, false)">削除</button>
+                    <button class="btn btn-danger" onclick="removeUser(${user.id}, false)" aria-label="削除" title="削除">削除</button>
                 `;
                 queueList.appendChild(userDiv);
             });
@@ -1840,6 +1865,7 @@
             setTimeout(() => {
                 initializePartySortable();
                 initializeQueueSortable();
+                initializeKeyboardReorder();
             }, 0);
         }
 
@@ -1857,6 +1883,7 @@
             appState.party.forEach((user, index) => {
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
+                userDiv.setAttribute('role', 'listitem');
                 
                 if (user.isFixed) {
                     userDiv.style.background = 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)';
@@ -1872,8 +1899,9 @@
                     <div>
                         <span class="user-name">${user.name}${user.isFixed ? ' 👑' : ''}</span>
                         <span class="user-number">${index + 1}</span>
+                        ${user.isFixed ? '<span class="lozenge loz-fixed" style="margin-left:8px;">固定</span>' : ''}
+                        ${nextLeavingIds.has(user.id) ? '<span class="lozenge loz-out" style="margin-left:8px;">次に退出</span>' : ''}
                     </div>
-                    ${user.isFixed ? '<span style="color: #666; font-size: 0.9em;">固定</span>' : ''}
                 `;
                 partyList.appendChild(userDiv);
             });
@@ -1883,6 +1911,7 @@
             appState.queue.forEach((user, index) => {
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
+                userDiv.setAttribute('role', 'listitem');
                 if (nextJoiningIds.has(user.id)) {
                     userDiv.classList.add('highlight-next-in');
                     userDiv.title = '次に参加（交代で入ります）';
@@ -1891,6 +1920,7 @@
                     <div>
                         <span class="user-name">${user.name}</span>
                         <span class="user-number">待機${index + 1}</span>
+                        ${nextJoiningIds.has(user.id) ? '<span class="lozenge loz-in" style="margin-left:8px;">次に参加</span>' : ''}
                     </div>
                 `;
                 queueList.appendChild(userDiv);
@@ -1915,6 +1945,66 @@
                 console.warn('computeRotationPreview failed:', e);
                 return { nextJoiningIds: new Set(), nextLeavingIds: new Set() };
             }
+        }
+
+        // M3: Keyboard reordering for accessibility within lists
+        function moveItemInArray(arr, from, to) {
+            if (to < 0 || to >= arr.length || from === to) return false;
+            const item = arr.splice(from, 1)[0];
+            arr.splice(to, 0, item);
+            return true;
+        }
+
+        function announce(text) {
+            const el = document.getElementById('ariaAnnouncements');
+            if (el) { el.textContent = ''; setTimeout(() => { el.textContent = text; }, 10); }
+        }
+
+        function initializeKeyboardReorder() {
+            const partyList = document.getElementById('partyList');
+            const queueList = document.getElementById('queueList');
+            const handler = async (e) => {
+                const target = e.target.closest('[data-user-id]');
+                if (!target) return;
+                const userId = parseInt(target.getAttribute('data-user-id'));
+                let arr, listId, label;
+                if (partyList && partyList.contains(target)) { arr = appState.party; listId = 'partyList'; label = 'パーティー'; }
+                else if (queueList && queueList.contains(target)) { arr = appState.queue; listId = 'queueList'; label = 'キュー'; }
+                else return;
+
+                const index = arr.findIndex(u => u.id === userId);
+                if (index < 0) return;
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (moveItemInArray(arr, index, index - 1)) {
+                        await saveUsersToSupabase();
+                        updateDisplay();
+                        announce(`${label}の順序を上に移動しました`);
+                        // restore focus
+                        setTimeout(() => {
+                            const list = document.getElementById(listId);
+                            if (!list) return;
+                            const el = list.querySelector(`[data-user-id="${userId}"]`);
+                            if (el) el.focus();
+                        }, 0);
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (moveItemInArray(arr, index, index + 1)) {
+                        await saveUsersToSupabase();
+                        updateDisplay();
+                        announce(`${label}の順序を下に移動しました`);
+                        setTimeout(() => {
+                            const list = document.getElementById(listId);
+                            if (!list) return;
+                            const el = list.querySelector(`[data-user-id="${userId}"]`);
+                            if (el) el.focus();
+                        }, 0);
+                    }
+                }
+            };
+            if (partyList) partyList.addEventListener('keydown', handler);
+            if (queueList) queueList.addEventListener('keydown', handler);
         }
 
         // URLをコピー
