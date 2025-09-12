@@ -9,7 +9,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautif
 function SetupForm() {
   const [masterName, setMasterName] = React.useState<string>('');
   const [partySize, setPartySize] = React.useState<number>(5);
-  const [rotationCount, setRotationCount] = React.useState<number>(1);
+  // rotation count is fixed to 1 at setup; selector removed
   const [approval, setApproval] = React.useState<boolean>(false);
 
   React.useEffect(() => {
@@ -17,8 +17,7 @@ function SetupForm() {
     if (nameEl) setMasterName(nameEl.value || '');
     const ps = document.getElementById('partySize') as HTMLSelectElement | null;
     if (ps) setPartySize(parseInt(ps.value, 10));
-    const rc = document.getElementById('rotationCount') as HTMLSelectElement | null;
-    if (rc) setRotationCount(parseInt(rc.value, 10));
+    // rotation count no-op
     const ap = document.getElementById('approvalRequired') as HTMLInputElement | null;
     if (ap) setApproval(ap.checked);
   }, []);
@@ -34,24 +33,21 @@ function SetupForm() {
     // trigger existing onchange
     (window as any).updateRotationOptions && (window as any).updateRotationOptions();
   }, [partySize]);
-  React.useEffect(() => {
-    const rc = document.getElementById('rotationCount') as HTMLSelectElement | null;
-    if (rc) rc.value = String(rotationCount);
-  }, [rotationCount]);
+  // rotation count no-op
   React.useEffect(() => {
     const ap = document.getElementById('approvalRequired') as HTMLInputElement | null;
     if (ap) ap.checked = approval;
   }, [approval]);
 
   const partyOptions = [2,3,4,5,6,7,8,9,10].map(v => ({ label: `${v}人パーティー`, value: v }));
-  const rotationOptions = [1,2,3].map(v => ({ label: `${v}人ずつ交代`, value: v }));
+  // rotation options removed for setup
 
-  // publish values for host
+  // publish values for host (rotationCount fixed at 1)
   React.useEffect(() => {
     try {
-      (window as any).setSetupValues && (window as any).setSetupValues({ masterName, partySize, rotationCount, approval });
+      (window as any).setSetupValues && (window as any).setSetupValues({ masterName, partySize, approval });
     } catch {}
-  }, [masterName, partySize, rotationCount, approval]);
+  }, [masterName, partySize, approval]);
 
   return (
     <Box>
@@ -65,10 +61,7 @@ function SetupForm() {
             <label>パーティー人数</label>
             <Select inputId="ak-partySize" options={partyOptions} value={partyOptions.find(o => o.value === partySize) as any} onChange={(opt: any) => setPartySize(opt?.value)} />
           </Box>
-          <Box>
-            <label>交代人数</label>
-            <Select inputId="ak-rotationCount" options={rotationOptions} value={rotationOptions.find(o => o.value === rotationCount) as any} onChange={(opt: any) => setRotationCount(opt?.value)} />
-          </Box>
+          {/* 交代人数の選択は初回画面では非表示（デフォルト1人） */}
         </Inline>
         <Box>
           <Checkbox label="参加登録に承認が必要" isChecked={approval} onChange={() => setApproval(v => !v)} />
