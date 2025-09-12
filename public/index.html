@@ -188,27 +188,22 @@
             transform: translateY(-2px);
         }
 
+        .pending-registrations-list[role="list"] { outline: none; }
         .pending-registration-item {
-            background: #fff9e6;
-            border: 1px solid #f7b731;
-            padding: 15px;
+            background: var(--ads-color-surface);
+            border: 1px solid var(--ads-color-border);
+            padding: 12px;
             margin-bottom: 10px;
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: var(--ads-elevation-shadow);
         }
 
-        .pending-registration-name {
-            font-weight: 600;
-            color: #333;
-        }
+        .pending-registration-name { font-weight: 600; color: var(--ads-color-text); }
 
-        .pending-registration-time {
-            font-size: 12px;
-            color: #666;
-            margin-top: 3px;
-        }
+        .pending-registration-time { font-size: 12px; color: #6B778C; margin-top: 3px; }
 
         .pending-registration-actions {
             display: flex;
@@ -2605,6 +2600,7 @@
         // 保留申請を承認
         async function approveRegistration(registrationId, name) {
             try {
+                setBusy('承認処理中…');
                 // 重複チェック
                 if (isUserNameDuplicate(name)) {
                     alert('その名前のユーザーは既に参加しています');
@@ -2616,6 +2612,7 @@
                         })
                         .eq('id', registrationId);
                     loadPendingRegistrations();
+                    showFlag('既に参加済みのため却下しました', 'warning');
                     return;
                 }
                 
@@ -2631,6 +2628,7 @@
                 if (updateError) {
                     console.error('Approval update error:', updateError);
                     alert('承認の更新に失敗しました');
+                    showFlag('承認の更新に失敗しました', 'error');
                     return;
                 }
                 
@@ -2654,16 +2652,21 @@
                 // 表示を更新
                 updateDisplay();
                 loadPendingRegistrations();
+                showFlag('承認しました', 'success');
                 
             } catch (error) {
                 console.error('Approval exception:', error);
                 alert('承認処理に失敗しました');
+                showFlag('承認処理に失敗しました', 'error');
+            } finally {
+                setBusy(null);
             }
         }
 
         // 保留申請を却下
         async function rejectRegistration(registrationId) {
             try {
+                setBusy('却下処理中…');
                 const { error } = await supabase
                     .from('pending_registrations')
                     .update({
@@ -2674,14 +2677,19 @@
                 if (error) {
                     console.error('Rejection error:', error);
                     alert('却下の更新に失敗しました');
+                    showFlag('却下の更新に失敗しました', 'error');
                     return;
                 }
                 
                 loadPendingRegistrations();
+                showFlag('却下しました', 'success');
                 
             } catch (error) {
                 console.error('Rejection exception:', error);
                 alert('却下処理に失敗しました');
+                showFlag('却下処理に失敗しました', 'error');
+            } finally {
+                setBusy(null);
             }
         }
 
@@ -2749,13 +2757,21 @@
                 
                 if (appState.pendingRegistrations.length === 0) {
                     console.log('📝 No pending registrations to display');
-                    list.innerHTML = '<p style="color: #666; font-style: italic;">現在、保留中の申請はありません</p>';
+                    list.setAttribute('role', 'list');
+                    list.innerHTML = `
+                        <div style="border:1px solid var(--ads-color-border);border-radius:8px;padding:16px;background:var(--ads-color-surface);color:var(--ads-color-text);">
+                            <div style="font-weight:600; margin-bottom:6px;">保留中の申請はありません</div>
+                            <div class="hint">閲覧者からの参加申請がここに表示されます</div>
+                        </div>
+                    `;
                 } else {
                     console.log(`📝 Displaying ${appState.pendingRegistrations.length} pending registrations`);
                     list.innerHTML = '';
+                    list.setAttribute('role', 'list');
                     appState.pendingRegistrations.forEach(registration => {
                         const item = document.createElement('div');
                         item.className = 'pending-registration-item';
+                        item.setAttribute('role', 'listitem');
                         
                         const requestTime = new Date(registration.requested_at).toLocaleString('ja-JP');
                         
@@ -2765,8 +2781,8 @@
                                 <div class="pending-registration-time">申請日時: ${requestTime}</div>
                             </div>
                             <div class="pending-registration-actions">
-                                <button class="btn-approve" onclick="approveRegistration(${registration.id}, '${registration.name}')">承認</button>
-                                <button class="btn-reject" onclick="rejectRegistration(${registration.id})">却下</button>
+                                <button class="btn-approve" aria-label="${registration.name} を承認" onclick="approveRegistration(${registration.id}, '${registration.name}')">承認</button>
+                                <button class="btn-reject" aria-label="${registration.name} を却下" onclick="rejectRegistration(${registration.id})">却下</button>
                             </div>
                         `;
                         
