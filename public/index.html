@@ -1623,8 +1623,8 @@
             let setup = null;
             try { setup = window.getSetupValues ? window.getSetupValues() : null; } catch(_) {}
 
-            let partySize = setup && Number.isFinite(setup.partySize) ? parseInt(setup.partySize, 10) : parseInt(document.getElementById('partySize').value);
-            let rotationCount = setup && Number.isFinite(setup.rotationCount) ? parseInt(setup.rotationCount, 10) : parseInt(document.getElementById('rotationCount').value);
+            let partySize = setup && setup.partySize != null ? parseInt(setup.partySize, 10) : parseInt(document.getElementById('partySize').value);
+            let rotationCount = setup && setup.rotationCount != null ? parseInt(setup.rotationCount, 10) : parseInt(document.getElementById('rotationCount').value);
             if (!Number.isFinite(partySize) || partySize < 2) partySize = 5;
             if (!Number.isFinite(rotationCount) || rotationCount < 1) rotationCount = 1;
             if (rotationCount > partySize) rotationCount = partySize;
