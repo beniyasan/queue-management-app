@@ -60,6 +60,18 @@
             box-shadow: 0 6px 20px rgba(0,0,0,0.06);
         }
 
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-icon {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
         .header h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
@@ -611,7 +623,10 @@
     <a href="#mainContent" class="skip-link">メインコンテンツへスキップ</a>
     <div class="container">
         <div class="header">
-            <h1>Queue Party</h1>
+            <div class="brand">
+                <img src="./assets/queue-party-icon.png" alt="Queue Party icon" class="brand-icon" onerror="this.style.display='none'">
+                <h1>Queue Party</h1>
+            </div>
             <div id="sessionInfo" class="session-info hidden">
                 <div class="session-info-header" onclick="toggleSessionInfo()">
                     <span><strong>セッション情報</strong></span>
