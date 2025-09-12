@@ -28,11 +28,10 @@ ALTER TABLE public.session_users
   ADD CONSTRAINT uq_session_users_session_user UNIQUE (session_id, user_id);
 
 ALTER TABLE public.session_users
-  ADD CONSTRAINT uq_session_users_order UNIQUE (session_id, position, order_index);
+  ADD CONSTRAINT uq_session_users_order UNIQUE (session_id, position, order_index) DEFERRABLE INITIALLY DEFERRED;
 
 CREATE INDEX IF NOT EXISTS idx_session_users_session_position
   ON public.session_users (session_id, position);
 
 CREATE INDEX IF NOT EXISTS idx_session_users_session_position_order
   ON public.session_users (session_id, position, order_index);
-
