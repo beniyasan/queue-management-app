@@ -142,8 +142,37 @@ function mountIfPresent(id: string, node: React.ReactNode) {
 export function init() {
   mountIfPresent('setupFormMount', <SetupForm />);
   mountIfPresent('managementSettingsMount', <ManagementSettings />);
+
+  // Hide legacy form controls to avoid duplicate UI, but keep them in DOM for compatibility
+  try {
+    document.body.classList.add('ak-mounted');
+    const toHideIds = [
+      'masterName',
+      'partySize',
+      'rotationCount',
+      'approvalRequired',
+      'currentPartySize',
+      'currentRotationCount',
+      'currentRegistrationMode',
+    ];
+    toHideIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        const group = el.closest('.form-group, .setting-group') as HTMLElement | null;
+        if (group) {
+          group.style.display = 'none';
+          group.setAttribute('aria-hidden', 'true');
+        } else {
+          // as a fallback, hide the element itself
+          (el as HTMLElement).style.display = 'none';
+          el.setAttribute('aria-hidden', 'true');
+        }
+      }
+    });
+  } catch (e) {
+    // no-op
+  }
 }
 
 // Expose init on window for non-module script
 (window as any).FormsMount = { init };
-
