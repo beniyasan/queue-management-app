@@ -293,6 +293,21 @@
         .op-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: #555; }
         .spinner { width: 16px; height: 16px; border: 2px solid #ccc; border-top-color: var(--ads-color-info); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        /* M5: skeletons & viewer banner */
+        .skeleton {
+            background: linear-gradient(90deg, #eee 25%, #f5f5f5 37%, #eee 63%);
+            background-size: 400% 100%;
+            animation: shimmer 1.4s ease infinite;
+            border-radius: 6px;
+        }
+        @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+        .sk-line { height: 14px; margin: 6px 0; }
+        .sk-card { height: 56px; margin-bottom: 10px; }
+        .viewer-banner { border: 1px solid var(--ads-color-border); background: var(--ads-color-surface); color: var(--ads-color-text); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .dot.ok { background: #22c55e; }
+        .dot.warn { background: #f59e0b; }
+        .dot.err { background: #ef4444; }
 
         .status-pending {
             background: #fff3cd;
@@ -759,7 +774,8 @@
             <!-- 閲覧専用セクション -->
             <div id="viewSection" class="management-section hidden">
                 <h2>👀 閲覧専用モード</h2>
-                <p>このセッションは閲覧専用です。リアルタイムで状況を確認できます。</p>
+                <div id="viewerConnectionBanner" class="viewer-banner hidden"><span class="dot warn"></span><span id="viewerConnectionText">接続中...</span></div>
+                <p class="hint">このセッションは閲覧専用です。リアルタイムで状況を確認できます。</p>
                 
                 <!-- 自己登録フォーム（承認制の場合） -->
                 <div id="selfRegistrationForm" class="settings-panel" style="display: none;">
@@ -1318,6 +1334,10 @@
             if (!supabase) return false;
             
             try {
+                if (!appState.isCreator) {
+                    appState.isLoadingView = true;
+                    updateDisplay();
+                }
                 console.log('Loading session from Supabase:', sessionCode);
                 
                 const { data: sessionData, error: sessionError } = await supabase
@@ -1394,6 +1414,11 @@
             } catch (error) {
                 console.error('Error loading session:', error);
                 return false;
+            } finally {
+                if (!appState.isCreator) {
+                    appState.isLoadingView = false;
+                    updateDisplay();
+                }
             }
         }
 
@@ -1502,6 +1527,23 @@
                     default:
                         statusTextElement.textContent = '🟡 接続中...';
                         statusTextElement.style.color = '#f59e0b';
+                }
+            }
+
+            // Viewer banner update
+            if (!appState.isCreator) {
+                const banner = document.getElementById('viewerConnectionBanner');
+                const text = document.getElementById('viewerConnectionText');
+                if (banner && text) {
+                    banner.classList.remove('hidden');
+                    let cls = 'warn';
+                    let t = '接続中...';
+                    if (status === 'SUBSCRIBED') { cls = 'ok'; t = 'リアルタイム接続中'; }
+                    else if (status === 'CHANNEL_ERROR') { cls = 'err'; t = '接続エラー（再接続中…）'; }
+                    else if (status === 'CLOSED') { cls = 'warn'; t = '接続終了'; }
+                    text.textContent = t;
+                    const dot = banner.querySelector('.dot');
+                    if (dot) { dot.className = `dot ${cls}`; }
                 }
             }
         }
@@ -1866,15 +1908,36 @@
 
         // 閲覧者用表示更新
         function updateViewerDisplay() {
-            document.getElementById('viewPartyCount').textContent = appState.party.length;
-            document.getElementById('viewQueueCount').textContent = appState.queue.length;
-            document.getElementById('viewTotalCount').textContent = appState.party.length + appState.queue.length;
+            if (appState.isLoadingView) {
+                // skeleton for stats
+                document.getElementById('viewPartyCount').innerHTML = '';
+                document.getElementById('viewQueueCount').innerHTML = '';
+                document.getElementById('viewTotalCount').innerHTML = '';
+                document.getElementById('viewPartyCount').className = 'stat-number skeleton sk-line';
+                document.getElementById('viewQueueCount').className = 'stat-number skeleton sk-line';
+                document.getElementById('viewTotalCount').className = 'stat-number skeleton sk-line';
+            } else {
+                document.getElementById('viewPartyCount').className = 'stat-number';
+                document.getElementById('viewQueueCount').className = 'stat-number';
+                document.getElementById('viewTotalCount').className = 'stat-number';
+                document.getElementById('viewPartyCount').textContent = appState.party.length;
+                document.getElementById('viewQueueCount').textContent = appState.queue.length;
+                document.getElementById('viewTotalCount').textContent = appState.party.length + appState.queue.length;
+            }
             
             // 次回ローテーションのハイライト対象を計算
             const { nextJoiningIds, nextLeavingIds } = computeRotationPreview();
 
             const partyList = document.getElementById('viewPartyList');
             partyList.innerHTML = '';
+            if (appState.isLoadingView) {
+                for (let i=0; i<3; i++) {
+                    const sk = document.createElement('div');
+                    sk.className = 'skeleton sk-card';
+                    partyList.appendChild(sk);
+                }
+                return;
+            }
             appState.party.forEach((user, index) => {
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
@@ -1903,6 +1966,14 @@
             
             const queueList = document.getElementById('viewQueueList');
             queueList.innerHTML = '';
+            if (appState.isLoadingView) {
+                for (let i=0; i<3; i++) {
+                    const sk = document.createElement('div');
+                    sk.className = 'skeleton sk-card';
+                    queueList.appendChild(sk);
+                }
+                return;
+            }
             appState.queue.forEach((user, index) => {
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
