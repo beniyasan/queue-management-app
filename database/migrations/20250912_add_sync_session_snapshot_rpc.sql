@@ -36,24 +36,22 @@ BEGIN
     -- Materialize incoming snapshot
     WITH party_incoming AS (
       SELECT 
-        COALESCE((rec).user_id, 0)::int AS user_id,
-        COALESCE((rec).name, '')::text AS name,
-        COALESCE((rec).is_fixed, false)::boolean AS is_fixed,
-        ROW_NUMBER() OVER () - 1 AS order_index,
+        rec.user_id::int AS user_id,
+        rec.name::text AS name,
+        COALESCE(rec.is_fixed, false)::boolean AS is_fixed,
+        COALESCE(rec.order_index, 0)::int AS order_index,
         'party'::text AS position
-      FROM (
-        SELECT jsonb_to_recordset(COALESCE(p_party, '[]'::jsonb)) AS rec(user_id int, name text, is_fixed boolean)
-      ) t
+      FROM jsonb_to_recordset(COALESCE(p_party, '[]'::jsonb))
+           AS rec(user_id int, name text, is_fixed boolean, order_index int)
     ), queue_incoming AS (
       SELECT 
-        COALESCE((rec).user_id, 0)::int AS user_id,
-        COALESCE((rec).name, '')::text AS name,
+        rec.user_id::int AS user_id,
+        rec.name::text AS name,
         false AS is_fixed,
-        ROW_NUMBER() OVER () - 1 AS order_index,
+        COALESCE(rec.order_index, 0)::int AS order_index,
         'queue'::text AS position
-      FROM (
-        SELECT jsonb_to_recordset(COALESCE(p_queue, '[]'::jsonb)) AS rec(user_id int, name text)
-      ) t
+      FROM jsonb_to_recordset(COALESCE(p_queue, '[]'::jsonb))
+           AS rec(user_id int, name text, order_index int)
     ), incoming AS (
       SELECT * FROM party_incoming
       UNION ALL
@@ -69,18 +67,25 @@ BEGIN
           order_index = EXCLUDED.order_index,
           is_fixed = EXCLUDED.is_fixed;
 
-    -- Delete rows not present in incoming
+    -- Delete rows not present in incoming (recompute incoming within this statement scope)
+    WITH party_incoming_del AS (
+      SELECT 
+        rec.user_id::int AS user_id
+      FROM jsonb_to_recordset(COALESCE(p_party, '[]'::jsonb))
+           AS rec(user_id int, name text, is_fixed boolean, order_index int)
+    ), queue_incoming_del AS (
+      SELECT 
+        rec.user_id::int AS user_id
+      FROM jsonb_to_recordset(COALESCE(p_queue, '[]'::jsonb))
+           AS rec(user_id int, name text, order_index int)
+    ), incoming_del AS (
+      SELECT user_id FROM party_incoming_del
+      UNION ALL
+      SELECT user_id FROM queue_incoming_del
+    )
     DELETE FROM public.session_users su
     WHERE su.session_id = v_session.id
-      AND NOT EXISTS (
-        SELECT 1 FROM (
-          SELECT user_id FROM (
-            SELECT user_id FROM party_incoming
-            UNION ALL
-            SELECT user_id FROM queue_incoming
-          ) u
-        ) x WHERE x.user_id = su.user_id
-      );
+      AND su.user_id NOT IN (SELECT user_id FROM incoming_del);
 
     -- Normalize order_index (party)
     WITH ranked_party AS (
@@ -120,4 +125,3 @@ BEGIN
   PERFORM pg_advisory_unlock(v_key);
 END;
 $$;
-
