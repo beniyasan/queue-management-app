@@ -67,16 +67,25 @@ BEGIN
           order_index = EXCLUDED.order_index,
           is_fixed = EXCLUDED.is_fixed;
 
-    -- Delete rows not present in incoming
+    -- Delete rows not present in incoming (recompute incoming within this statement scope)
+    WITH party_incoming_del AS (
+      SELECT 
+        rec.user_id::int AS user_id
+      FROM jsonb_to_recordset(COALESCE(p_party, '[]'::jsonb))
+           AS rec(user_id int, name text, is_fixed boolean, order_index int)
+    ), queue_incoming_del AS (
+      SELECT 
+        rec.user_id::int AS user_id
+      FROM jsonb_to_recordset(COALESCE(p_queue, '[]'::jsonb))
+           AS rec(user_id int, name text, order_index int)
+    ), incoming_del AS (
+      SELECT user_id FROM party_incoming_del
+      UNION ALL
+      SELECT user_id FROM queue_incoming_del
+    )
     DELETE FROM public.session_users su
     WHERE su.session_id = v_session.id
-      AND su.user_id NOT IN (
-        SELECT user_id FROM (
-          SELECT user_id FROM party_incoming
-          UNION ALL
-          SELECT user_id FROM queue_incoming
-        ) i
-      );
+      AND su.user_id NOT IN (SELECT user_id FROM incoming_del);
 
     -- Normalize order_index (party)
     WITH ranked_party AS (
