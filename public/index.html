@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>順番待ち管理アプリ</title>
+    <link rel="icon" href="data:,">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="./config.js"></script>
@@ -795,8 +796,8 @@
         // Mount Atlaskit islands if bundle is present
         (function() {
             function tryInit() {
-                if ((window as any).FormsMount && (window as any).FormsMount.init) {
-                    (window as any).FormsMount.init();
+                if (window && window.FormsMount && window.FormsMount.init) {
+                    window.FormsMount.init();
                 }
             }
             if (document.readyState === 'loading') {
@@ -816,7 +817,6 @@
         // Flags (toast-like)
         function showFlag(message, appearance = 'info', timeoutMs = 2000) {
             try {
-                setBusy('交代中…');
                 const container = document.getElementById('flagContainer');
                 if (!container) return;
                 const el = document.createElement('div');
