@@ -191,9 +191,26 @@ function DndManager() {
     try {
       const partyList = document.getElementById('partyList');
       const queueList = document.getElementById('queueList');
-      if (partyList) partyList.style.display = 'none';
-      if (queueList) queueList.style.display = 'none';
+      // hide legacy sections entirely to avoid duplicate headings
+      const hideSection = (el: HTMLElement | null) => {
+        if (!el) return;
+        const section = el.closest('.queue-section') as HTMLElement | null;
+        if (section) section.style.display = 'none'; else el.style.display = 'none';
+      };
+      hideSection(partyList as HTMLElement | null);
+      hideSection(queueList as HTMLElement | null);
     } catch {}
+  }, []);
+
+  // allow host to refresh lists after external changes
+  React.useEffect(() => {
+    (window as any).refreshDnd = () => {
+      const s = (window as any).getAppState ? (window as any).getAppState() : null;
+      if (!s) return;
+      setParty((s.party || []).map((x: any) => ({ id: x.id, name: x.name, isFixed: !!x.isFixed })));
+      setQueue((s.queue || []).map((x: any) => ({ id: x.id, name: x.name, isFixed: !!x.isFixed })));
+    };
+    return () => { try { delete (window as any).refreshDnd; } catch {} };
   }, []);
 
   const onDragEnd = async (result: DropResult) => {
@@ -262,11 +279,9 @@ function DndManager() {
     <DragDropContext onDragEnd={onDragEnd}>
       <Inline space="space.200">
         <Box style={{ minWidth: 280 }}>
-          <h3>🎮 パーティー参加者</h3>
           {renderList('party', party)}
         </Box>
         <Box style={{ minWidth: 280 }}>
-          <h3>⏳ キュー待機者</h3>
           {renderList('queue', queue)}
         </Box>
       </Inline>

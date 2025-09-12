@@ -1974,6 +1974,7 @@
                 initializePartySortable();
                 initializeQueueSortable();
                 initializeKeyboardReorder();
+                try { if (window.refreshDnd) window.refreshDnd(); } catch(_){}
             }, 0);
         }
 
