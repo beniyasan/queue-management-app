@@ -7,3 +7,6 @@ cckiro/
 # Article drafts
 ARTICLE_PART2.md
 BLOG_ARTICLE_PART2.md
+# Ignore root-level markdown except README.md
+/*.md
+!/README.md
