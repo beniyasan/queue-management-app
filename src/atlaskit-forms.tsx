@@ -4,6 +4,7 @@ import Textfield from '@atlaskit/textfield';
 import Select from '@atlaskit/select';
 import Checkbox from '@atlaskit/checkbox';
 import { Box, Stack, Inline } from '@atlaskit/primitives';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
 function SetupForm() {
   const [masterName, setMasterName] = React.useState<string>('');
@@ -173,6 +174,111 @@ export function init() {
     // no-op
   }
 }
+
+type User = { id: number; name: string; isFixed?: boolean };
+
+function DndManager() {
+  const initialParty: User[] = (window as any).getAppState ? (window as any).getAppState().party : [];
+  const initialQueue: User[] = (window as any).getAppState ? (window as any).getAppState().queue : [];
+  const [party, setParty] = React.useState<User[]>(initialParty);
+  const [queue, setQueue] = React.useState<User[]>(initialQueue);
+
+  React.useEffect(() => {
+    (window as any).useAtlaskitDnd = true;
+    try {
+      const partyList = document.getElementById('partyList');
+      const queueList = document.getElementById('queueList');
+      if (partyList) partyList.style.display = 'none';
+      if (queueList) queueList.style.display = 'none';
+    } catch {}
+  }, []);
+
+  const onDragEnd = async (result: DropResult) => {
+    const { source, destination } = result;
+    if (!destination) return;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+
+    const clone = (arr: User[]) => arr.map(x => ({ ...x }));
+    let newParty = clone(party);
+    let newQueue = clone(queue);
+
+    const moveWithin = (arr: User[], from: number, to: number) => {
+      const item = arr.splice(from, 1)[0];
+      arr.splice(to, 0, item);
+    };
+    const moveBetween = (fromArr: User[], toArr: User[], from: number, to: number) => {
+      const item = fromArr.splice(from, 1)[0];
+      toArr.splice(to, 0, item);
+    };
+
+    if (source.droppableId === 'party' && destination.droppableId === 'party') {
+      moveWithin(newParty, source.index, destination.index);
+    } else if (source.droppableId === 'queue' && destination.droppableId === 'queue') {
+      moveWithin(newQueue, source.index, destination.index);
+    } else if (source.droppableId === 'party' && destination.droppableId === 'queue') {
+      // prevent moving fixed
+      const u = newParty[source.index];
+      if (u && u.isFixed) return;
+      moveBetween(newParty, newQueue, source.index, destination.index);
+    } else if (source.droppableId === 'queue' && destination.droppableId === 'party') {
+      moveBetween(newQueue, newParty, source.index, destination.index);
+    }
+
+    setParty(newParty);
+    setQueue(newQueue);
+    if ((window as any).applyDnD) {
+      await (window as any).applyDnD(newParty, newQueue);
+    }
+  };
+
+  const renderList = (id: 'party'|'queue', items: User[]) => (
+    <Droppable droppableId={id}>
+      {(provided) => (
+        <div ref={provided.innerRef} {...provided.droppableProps}>
+          {items.map((u, idx) => (
+            <Draggable key={u.id} draggableId={`${id}-${u.id}`} index={idx}>
+              {(prov) => (
+                <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps} style={{
+                  background: 'var(--ads-color-surface)', border: '1px solid var(--ads-color-border)', borderRadius: 8,
+                  padding: 10, marginBottom: 8, boxShadow: 'var(--ads-elevation-shadow)', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  ...prov.draggableProps.style
+                }}>
+                  <span>{u.name}{u.isFixed ? ' 👑' : ''}</span>
+                  <span style={{ color: '#6B778C', fontSize: 12 }}>{id === 'party' ? idx + 1 : `待機${idx + 1}`}</span>
+                </div>
+              )}
+            </Draggable>
+          ))}
+          {provided.placeholder}
+        </div>
+      )}
+    </Droppable>
+  );
+
+  return (
+    <DragDropContext onDragEnd={onDragEnd}>
+      <Inline space="space.200">
+        <Box style={{ minWidth: 280 }}>
+          <h3>🎮 パーティー参加者</h3>
+          {renderList('party', party)}
+        </Box>
+        <Box style={{ minWidth: 280 }}>
+          <h3>⏳ キュー待機者</h3>
+          {renderList('queue', queue)}
+        </Box>
+      </Inline>
+    </DragDropContext>
+  );
+}
+
+export function initDnd() {
+  const mount = document.getElementById('dndMount');
+  if (!mount) return;
+  const root = createRoot(mount);
+  root.render(<DndManager />);
+}
+
+(window as any).FormsMount = { init, initDnd };
 
 // Expose init on window for non-module script
 (window as any).FormsMount = { init };

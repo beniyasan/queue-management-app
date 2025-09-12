@@ -747,6 +747,7 @@
                 </div>
 
                 <div class="queue-container">
+                    <div id="dndMount" class="settings-panel" style="margin-bottom: 16px;"></div>
                     <div class="queue-section">
                         <h3>🎮 パーティー参加者</h3>
                         <div id="partyList" class="user-list" role="list" aria-label="パーティー参加者"></div>
@@ -856,6 +857,9 @@
                 if (window && window.FormsMount && window.FormsMount.init) {
                     window.FormsMount.init();
                 }
+                if (window && window.FormsMount && window.FormsMount.initDnd) {
+                    window.FormsMount.initDnd();
+                }
             }
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', tryInit);
@@ -919,8 +923,23 @@
                 isRotating: false // 交代処理の多重実行防止
             };
 
+        // Expose interop for DnD island
+        window.getAppState = () => appState;
+        window.applyDnD = async (newParty, newQueue) => {
+            try {
+                appState.party = newParty;
+                appState.queue = newQueue;
+                await saveUsersToSupabase();
+                updateDisplay();
+            } catch (e) {
+                console.error('applyDnD failed:', e);
+                showFlag('並び替えの保存に失敗しました', 'error');
+            }
+        };
+
         // Sortable初期化（パーティー）
         function initializePartySortable() {
+            if (window.useAtlaskitDnd) return; // M7: disable legacy DnD when Atlaskit is mounted
             if (!appState.isCreator) return;
             const partyList = document.getElementById('partyList');
             if (!partyList) return;
@@ -943,6 +962,7 @@
 
         // Sortable初期化（キュー）
         function initializeQueueSortable() {
+            if (window.useAtlaskitDnd) return;
             if (!appState.isCreator) return;
             const queueList = document.getElementById('queueList');
             if (!queueList) return;
@@ -2055,6 +2075,7 @@
         }
 
         function initializeKeyboardReorder() {
+            if (window.useAtlaskitDnd) return; // disable when Atlaskit is active
             const partyList = document.getElementById('partyList');
             const queueList = document.getElementById('queueList');
             const handler = async (e) => {
