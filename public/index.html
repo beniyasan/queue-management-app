@@ -747,6 +747,7 @@
                 </div>
 
                 <div class="queue-container">
+                    <div id="dndMount" class="settings-panel" style="margin-bottom: 16px;"></div>
                     <div class="queue-section">
                         <h3>🎮 パーティー参加者</h3>
                         <div id="partyList" class="user-list" role="list" aria-label="パーティー参加者"></div>
@@ -856,6 +857,9 @@
                 if (window && window.FormsMount && window.FormsMount.init) {
                     window.FormsMount.init();
                 }
+                if (window && window.FormsMount && window.FormsMount.initDnd) {
+                    window.FormsMount.initDnd();
+                }
             }
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', tryInit);
@@ -919,8 +923,23 @@
                 isRotating: false // 交代処理の多重実行防止
             };
 
+        // Expose interop for DnD island
+        window.getAppState = () => appState;
+        window.applyDnD = async (newParty, newQueue) => {
+            try {
+                appState.party = newParty;
+                appState.queue = newQueue;
+                await saveUsersToSupabase();
+                updateDisplay();
+            } catch (e) {
+                console.error('applyDnD failed:', e);
+                showFlag('並び替えの保存に失敗しました', 'error');
+            }
+        };
+
         // Sortable初期化（パーティー）
         function initializePartySortable() {
+            if (window.useAtlaskitDnd) return; // M7: disable legacy DnD when Atlaskit is mounted
             if (!appState.isCreator) return;
             const partyList = document.getElementById('partyList');
             if (!partyList) return;
@@ -943,6 +962,7 @@
 
         // Sortable初期化（キュー）
         function initializeQueueSortable() {
+            if (window.useAtlaskitDnd) return;
             if (!appState.isCreator) return;
             const queueList = document.getElementById('queueList');
             if (!queueList) return;
@@ -1224,16 +1244,30 @@
                 console.error('Supabase not initialized');
                 return false;
             }
+            if (!appState.sessionCode) {
+                console.warn('skip saveSessionToSupabase: sessionCode not set yet');
+                return false;
+            }
             
             try {
                 const masterUser = appState.party.find(user => user.isFixed);
                 const masterName = masterUser ? masterUser.name : '主';
+
+                // Normalize to avoid NOT NULL violations
+                let ps = parseInt(appState.partySize, 10);
+                if (!Number.isFinite(ps) || ps < 2) ps = 5;
+                if (ps > 10) ps = 10;
+                let rc = parseInt(appState.rotationCount, 10);
+                if (!Number.isFinite(rc) || rc < 1) rc = 1;
+                if (rc > ps) rc = ps;
+                appState.partySize = ps;
+                appState.rotationCount = rc;
                 
                 const sessionData = {
                     session_code: appState.sessionCode,
                     master_name: masterName,
-                    party_size: appState.partySize,
-                    rotation_count: appState.rotationCount,
+                    party_size: ps,
+                    rotation_count: rc,
                     approval_required: appState.approvalRequired,
                     registration_mode: appState.registrationMode,
                     creator_token: appState.creatorToken,
@@ -1585,8 +1619,11 @@
                 return;
             }
 
-            const partySize = parseInt(document.getElementById('partySize').value);
-            const rotationCount = parseInt(document.getElementById('rotationCount').value);
+            let partySize = parseInt(document.getElementById('partySize').value);
+            let rotationCount = parseInt(document.getElementById('rotationCount').value);
+            if (!Number.isFinite(partySize) || partySize < 2) partySize = 5;
+            if (!Number.isFinite(rotationCount) || rotationCount < 1) rotationCount = 1;
+            if (rotationCount > partySize) rotationCount = partySize;
             const masterNameInput = document.getElementById('masterName').value.trim();
             const masterName = masterNameInput || '主';
             const approvalRequired = document.getElementById('approvalRequired').checked;
@@ -1698,6 +1735,12 @@
             updateRegistrationModeDisplay();
             
             updateUrlDisplay();
+
+            try {
+                if (window && window.FormsMount && window.FormsMount.mountManagement) {
+                    window.FormsMount.mountManagement();
+                }
+            } catch (_) {}
         }
 
         // 閲覧専用セクションを表示
@@ -1931,6 +1974,7 @@
                 initializePartySortable();
                 initializeQueueSortable();
                 initializeKeyboardReorder();
+                try { if (window.refreshDnd) window.refreshDnd(); } catch(_){}
             }, 0);
         }
 
@@ -2055,6 +2099,7 @@
         }
 
         function initializeKeyboardReorder() {
+            if (window.useAtlaskitDnd) return; // disable when Atlaskit is active
             const partyList = document.getElementById('partyList');
             const queueList = document.getElementById('queueList');
             const handler = async (e) => {
