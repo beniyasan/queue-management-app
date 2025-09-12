@@ -9,6 +9,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="./config.js"></script>
     <style>
+        .skip-link { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+        .skip-link:focus { position: static; width: auto; height: auto; padding: 8px 12px; background: #111827; color: #fff; border-radius: 6px; }
         :root {
             --ads-color-text: #172B4D;
             --ads-color-surface: #FFFFFF;
@@ -131,6 +133,8 @@
             transform: none;
             box-shadow: none;
         }
+
+        .btn:focus-visible { outline: 3px solid var(--ads-color-info); outline-offset: 2px; }
 
         .btn-danger {
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
@@ -602,6 +606,7 @@
     </style>
 </head>
 <body>
+    <a href="#mainContent" class="skip-link">メインコンテンツへスキップ</a>
     <div class="container">
         <div class="header">
             <h1>🎯 順番待ち管理</h1>
@@ -618,7 +623,7 @@
             </div>
         </div>
 
-        <div class="content">
+        <div class="content" id="mainContent">
             <!-- 初期設定セクション -->
             <div id="setupSection" class="setup-section">
                 <h2>🚀 新しいセッションを開始</h2>
@@ -775,7 +780,7 @@
             <div id="viewSection" class="management-section hidden">
                 <h2>👀 閲覧専用モード</h2>
                 <div id="viewerConnectionBanner" class="viewer-banner hidden"><span class="dot warn"></span><span id="viewerConnectionText">接続中...</span></div>
-                <p class="hint">このセッションは閲覧専用です。リアルタイムで状況を確認できます。</p>
+                <p class="hint" id="viewerHint"></p>
                 
                 <!-- 自己登録フォーム（承認制の場合） -->
                 <div id="selfRegistrationForm" class="settings-panel" style="display: none;">
@@ -818,7 +823,7 @@
             </div>
         </div>
     </div>
-    <div id="flagContainer" class="flag-container"></div>
+    <div id="flagContainer" class="flag-container" role="status" aria-live="polite"></div>
     <div id="ariaAnnouncements" aria-live="polite" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"></div>
 
     <script>
@@ -1265,7 +1270,7 @@
                 isSavingUsers = true;
                 currentSavePromise = (async () => {
                     try {
-                        setBusy('保存中…');
+                        setBusy(t('saving'));
                         const partyPayload = appState.party.map((user, index) => ({
                             user_id: user.id,
                             name: user.name,
@@ -1301,12 +1306,12 @@
                             } else {
                                 alert(`ユーザー保存エラー: ${error.message}`);
                             }
-                            showFlag('ユーザー保存に失敗しました', 'error');
+                            showFlag(t('save_failed'), 'error');
                             return false;
                         }
 
                         console.log('✅ sync_session_snapshot completed');
-                        showFlag('保存完了', 'success');
+                        showFlag(t('saved'), 'success');
                         return true;
                     } catch (error) {
                         console.error('❌ Exception saving users (RPC):', error);
@@ -1513,15 +1518,15 @@
                 
                 switch (status) {
                     case 'SUBSCRIBED':
-                        statusTextElement.textContent = '🟢 リアルタイム接続中';
+                        statusTextElement.textContent = '🟢 ' + t('conn_ok');
                         statusTextElement.style.color = '#10b981';
                         break;
                     case 'CHANNEL_ERROR':
-                        statusTextElement.textContent = '🔴 接続エラー（再接続中...）';
+                        statusTextElement.textContent = '🔴 ' + t('conn_err');
                         statusTextElement.style.color = '#ef4444';
                         break;
                     case 'CLOSED':
-                        statusTextElement.textContent = '🟡 接続終了';
+                        statusTextElement.textContent = '🟡 ' + t('conn_warn');
                         statusTextElement.style.color = '#f59e0b';
                         break;
                     default:
@@ -1538,9 +1543,9 @@
                     banner.classList.remove('hidden');
                     let cls = 'warn';
                     let t = '接続中...';
-                    if (status === 'SUBSCRIBED') { cls = 'ok'; t = 'リアルタイム接続中'; }
-                    else if (status === 'CHANNEL_ERROR') { cls = 'err'; t = '接続エラー（再接続中…）'; }
-                    else if (status === 'CLOSED') { cls = 'warn'; t = '接続終了'; }
+                    if (status === 'SUBSCRIBED') { cls = 'ok'; t = t('conn_ok'); }
+                    else if (status === 'CHANNEL_ERROR') { cls = 'err'; t = t('conn_err'); }
+                    else if (status === 'CLOSED') { cls = 'warn'; t = t('conn_warn'); }
                     text.textContent = t;
                     const dot = banner.querySelector('.dot');
                     if (dot) { dot.className = `dot ${cls}`; }
@@ -1764,14 +1769,14 @@
                     } else {
                         alert('交代処理に失敗しました');
                     }
-                    showFlag('交代に失敗しました', 'error');
+                    showFlag(t('rotate_failed'), 'error');
                     return;
                 }
                 console.log('✅ rotate_session result:', data);
                 // DBの状態を再読込
                 await loadSessionFromSupabase(appState.sessionCode);
                 updateDisplay();
-                showFlag('交代完了', 'success');
+                showFlag(t('rotated'), 'success');
             } finally {
                 appState.isRotating = false;
                 const nextBtn2 = document.getElementById('nextBtn');
@@ -2409,6 +2414,8 @@
         // ページ読み込み時の初期化
         document.addEventListener('DOMContentLoaded', function() {
             initializeFromUrl();
+            const vh = document.getElementById('viewerHint');
+            if (vh) vh.textContent = t('viewer_hint');
         });
 
         // ページを閉じる際のクリーンアップ
@@ -2671,7 +2678,7 @@
         // 保留申請を承認
         async function approveRegistration(registrationId, name) {
             try {
-                setBusy('承認処理中…');
+                setBusy(t('approve_doing'));
                 // 重複チェック
                 if (isUserNameDuplicate(name)) {
                     alert('その名前のユーザーは既に参加しています');
@@ -2699,7 +2706,7 @@
                 if (updateError) {
                     console.error('Approval update error:', updateError);
                     alert('承認の更新に失敗しました');
-                    showFlag('承認の更新に失敗しました', 'error');
+                    showFlag(t('approve_failed'), 'error');
                     return;
                 }
                 
@@ -2723,12 +2730,12 @@
                 // 表示を更新
                 updateDisplay();
                 loadPendingRegistrations();
-                showFlag('承認しました', 'success');
+                showFlag(t('approve_done'), 'success');
                 
             } catch (error) {
                 console.error('Approval exception:', error);
                 alert('承認処理に失敗しました');
-                showFlag('承認処理に失敗しました', 'error');
+                showFlag(t('approve_failed'), 'error');
             } finally {
                 setBusy(null);
             }
@@ -2737,7 +2744,7 @@
         // 保留申請を却下
         async function rejectRegistration(registrationId) {
             try {
-                setBusy('却下処理中…');
+                setBusy(t('reject_doing'));
                 const { error } = await supabase
                     .from('pending_registrations')
                     .update({
@@ -2748,17 +2755,17 @@
                 if (error) {
                     console.error('Rejection error:', error);
                     alert('却下の更新に失敗しました');
-                    showFlag('却下の更新に失敗しました', 'error');
+                    showFlag(t('reject_failed'), 'error');
                     return;
                 }
                 
                 loadPendingRegistrations();
-                showFlag('却下しました', 'success');
+                showFlag(t('reject_done'), 'success');
                 
             } catch (error) {
                 console.error('Rejection exception:', error);
                 alert('却下処理に失敗しました');
-                showFlag('却下処理に失敗しました', 'error');
+                showFlag(t('reject_failed'), 'error');
             } finally {
                 setBusy(null);
             }
