@@ -401,23 +401,36 @@
         /* Setup screen layout tuning */
         #setupSection {
             padding-top: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+        #setupSection h2 { text-align: center; }
         #setupFormMount { /* Atlaskit form island wrapper */
+            width: 100%;
             max-width: 520px;
+            margin: 0 auto 8px;
         }
         #setupSection .form-group { /* native fallback inputs */
+            width: 100%;
             max-width: 520px;
+            margin: 0 auto 12px;
         }
         #setupSection .form-group input,
         #setupSection .form-group select {
+            width: 100%;
             max-width: 420px;
+            margin-left: auto;
+            margin-right: auto;
         }
         #setupSection .setup-actions {
+            width: 100%;
             max-width: 520px;
             display: flex;
+            justify-content: center;
             align-items: center;
             gap: 12px;
-            margin-top: 8px;
+            margin: 12px auto 4px;
         }
         #setupSection .btn {
             padding: 10px 20px;
