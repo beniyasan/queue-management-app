@@ -37,18 +37,24 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 24px;
+            /* theme background inspired by base.png */
+            background: radial-gradient(65% 60% at 50% 18%, rgba(254, 215, 170, 0.45) 0%, rgba(254, 215, 170, 0.0) 45%),
+                        radial-gradient(110% 120% at 100% 0%, rgba(99, 102, 241, 0.75) 0%, rgba(99, 102, 241, 0.18) 60%, rgba(99,102,241,0.06) 100%),
+                        radial-gradient(110% 120% at 0% 100%, rgba(59, 130, 246, 0.75) 0%, rgba(59,130,246,0.18) 60%, rgba(59,130,246,0.06) 100%),
+                        #0b1220;
+            background-attachment: fixed;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            background: rgba(255,255,255,0.9);
+            border-radius: 24px;
+            box-shadow: 0 30px 90px rgba(88, 28, 135, 0.35), 0 0 0 1px rgba(139, 92, 246, 0.22);
             overflow: hidden;
+            backdrop-filter: blur(3px);
         }
 
         .header {
@@ -66,8 +72,8 @@
             gap: 12px;
         }
         .brand-icon {
-            width: 44px;
-            height: 44px;
+            width: 36px;
+            height: 36px;
             object-fit: contain;
             border-radius: 8px;
         }
@@ -125,15 +131,16 @@
         }
 
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #6d28d9 0%, #9333ea 100%);
             color: white;
             border: none;
             padding: 12px 24px;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 12px 24px rgba(147,51,234,0.35);
         }
 
         .btn:hover {
@@ -151,7 +158,7 @@
         .btn:focus-visible { outline: 3px solid var(--ads-color-info); outline-offset: 2px; }
 
         .btn-danger {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         }
 
         .btn-danger:hover {
@@ -643,7 +650,7 @@
         <div class="content" id="mainContent">
             <!-- 初期設定セクション -->
             <div id="setupSection" class="setup-section">
-                <h2>🚀 新しいセッションを開始</h2>
+                <h2>新しいセッションを開始</h2>
                 <div id="setupFormMount" style="margin-bottom: 16px;"></div>
                 
                 <div class="form-group">
@@ -666,14 +673,7 @@
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label for="rotationCount">交代人数を選択:</label>
-                    <select id="rotationCount">
-                        <option value="1">1人ずつ交代</option>
-                        <option value="2">2人ずつ交代</option>
-                        <option value="3">3人ずつ交代</option>
-                    </select>
-                </div>
+                <!-- 初回画面の交代人数選択は非表示（デフォルト1人） -->
 
                 <div class="form-group">
                     <label>
@@ -1640,8 +1640,9 @@
             let setup = null;
             try { setup = window.getSetupValues ? window.getSetupValues() : null; } catch(_) {}
 
-            let partySize = setup && setup.partySize != null ? parseInt(setup.partySize, 10) : parseInt(document.getElementById('partySize').value);
-            let rotationCount = setup && setup.rotationCount != null ? parseInt(setup.rotationCount, 10) : parseInt(document.getElementById('rotationCount').value);
+            let partySize = setup && setup.partySize != null ? parseInt(setup.partySize, 10) : parseInt((document.getElementById('partySize')||{}).value || '');
+            // rotation count is fixed to 1 on setup (no selector in UI)
+            let rotationCount = 1;
             if (!Number.isFinite(partySize) || partySize < 2) partySize = 5;
             if (!Number.isFinite(rotationCount) || rotationCount < 1) rotationCount = 1;
             if (rotationCount > partySize) rotationCount = partySize;
