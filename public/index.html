@@ -1114,7 +1114,7 @@
             }
         }
 
-        // Supabaseにユーザーデータを保存（直列化＋再試行でロスト回避）
+        // Supabaseにユーザーデータを保存（RPCで差分適用＋直列化）
         let isSavingUsers = false;
         let saveQueued = false;
         let currentSavePromise = null;
@@ -1140,57 +1140,48 @@
                 isSavingUsers = true;
                 currentSavePromise = (async () => {
                     try {
-                        console.log('Deleting existing users for session ID:', appState.sessionId);
-                        const { error: deleteError } = await supabase
-                            .from('session_users')
-                            .delete()
-                            .eq('session_id', appState.sessionId);
+                        const partyPayload = appState.party.map((user, index) => ({
+                            user_id: user.id,
+                            name: user.name,
+                            is_fixed: !!user.isFixed,
+                            order_index: index
+                        }));
+                        const queuePayload = appState.queue.map((user, index) => ({
+                            user_id: user.id,
+                            name: user.name,
+                            order_index: index
+                        }));
 
-                        if (deleteError) {
-                            console.error('❌ Error deleting existing users:', deleteError);
-                            // 続行は可能（後続の insert で上書きされるため）
-                        }
+                        console.log('Syncing users via RPC:', {
+                            party_len: partyPayload.length,
+                            queue_len: queuePayload.length
+                        });
 
-                        const allUsers = [
-                            ...appState.party.map((user, index) => ({
-                                session_id: appState.sessionId,
-                                user_id: user.id,
-                                name: user.name,
-                                position: 'party',
-                                order_index: index,
-                                is_fixed: user.isFixed || false
-                            })),
-                            ...appState.queue.map((user, index) => ({
-                                session_id: appState.sessionId,
-                                user_id: user.id,
-                                name: user.name,
-                                position: 'queue',
-                                order_index: index,
-                                is_fixed: false
-                            }))
-                        ];
+                        const { error } = await supabase.rpc('sync_session_snapshot', {
+                            p_session_code: appState.sessionCode,
+                            p_creator_token: appState.creatorToken,
+                            p_party: partyPayload,
+                            p_queue: queuePayload,
+                            p_party_size: null,
+                            p_rotation_count: null
+                        });
 
-                        console.log('Saving users data:', allUsers);
-
-                        if (allUsers.length > 0) {
-                            const { data, error } = await supabase
-                                .from('session_users')
-                                .insert(allUsers);
-
-                            if (error) {
-                                console.error('❌ Error saving users:', error);
-                                alert(`ユーザー保存エラー: ${error.message}`);
-                                return false;
+                        if (error) {
+                            console.error('❌ sync_session_snapshot RPC error:', error);
+                            if (String(error.message || '').includes('invalid token')) {
+                                alert('管理者トークンが無効です。管理者URLからアクセスしてください。');
+                            } else if (String(error.message || '').includes('session not found')) {
+                                alert('セッションが見つかりません');
                             } else {
-                                console.log('✅ Users saved successfully:', data);
-                                return true;
+                                alert(`ユーザー保存エラー: ${error.message}`);
                             }
-                        } else {
-                            console.log('No users to save');
-                            return true;
+                            return false;
                         }
+
+                        console.log('✅ sync_session_snapshot completed');
+                        return true;
                     } catch (error) {
-                        console.error('❌ Exception saving users:', error);
+                        console.error('❌ Exception saving users (RPC):', error);
                         alert(`ユーザー保存例外: ${error.message}`);
                         return false;
                     }
@@ -1583,6 +1574,11 @@
             if (nextBtn) nextBtn.disabled = true;
             
             try {
+                // 直前の保存が進行中であれば完了を待つ（交代と保存の直列化）
+                if (typeof currentSavePromise !== 'undefined' && currentSavePromise) {
+                    console.log('⏳ Waiting for in-flight save before rotation...');
+                    try { await currentSavePromise; } catch (_) {}
+                }
                 if (!supabase || !appState.sessionCode || !appState.creatorToken) {
                     alert('セッション情報が不足しています');
                     return;
