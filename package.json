@@ -1,7 +1,7 @@
 {
   "name": "queue-management-app",
   "version": "1.0.0",
-  "description": "順番待ち管理アプリ（Supabase統合版）",
+  "description": "Queue Party（Supabase統合版）",
   "scripts": {
     "dev": "vite",
     "build": "node build.js && vite build",
