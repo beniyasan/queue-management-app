@@ -3,11 +3,27 @@
   "version": "1.0.0",
   "description": "順番待ち管理アプリ（Supabase統合版）",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "node build.js",
-    "start": "vercel dev"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@atlaskit/checkbox": "^12.0.0",
+    "@atlaskit/css": "^1.4.0",
+    "@atlaskit/primitives": "^13.6.0",
+    "@atlaskit/select": "^18.0.0",
+    "@atlaskit/textfield": "^6.5.0",
+    "@atlaskit/tokens": "^3.2.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.3"
+  },
   "keywords": [
     "queue",
     "management",

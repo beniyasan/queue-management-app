@@ -594,6 +594,7 @@
             <!-- 初期設定セクション -->
             <div id="setupSection" class="setup-section">
                 <h2>🚀 新しいセッションを開始</h2>
+                <div id="setupFormMount" style="margin-bottom: 16px;"></div>
                 
                 <div class="form-group">
                     <label for="masterName">主ユーザーの名前 (空白の場合は「主」):</label>
@@ -662,6 +663,7 @@
                 <div class="settings-panel">
                     <h3>セッション設定</h3>
                     <div class="settings-row">
+                        <div id="managementSettingsMount" style="width: 100%; margin-bottom: 16px;"></div>
                         <div class="setting-group">
                             <label for="currentPartySize">パーティー人数:</label>
                             <select id="currentPartySize" onchange="updatePartySize()">
@@ -790,6 +792,19 @@
     <div id="flagContainer" class="flag-container"></div>
 
     <script>
+        // Mount Atlaskit islands if bundle is present
+        (function() {
+            function tryInit() {
+                if ((window as any).FormsMount && (window as any).FormsMount.init) {
+                    (window as any).FormsMount.init();
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', tryInit);
+            } else {
+                tryInit();
+            }
+        })();
         // Supabase関連
         let supabase = null;
         let subscription = null;
@@ -3127,4 +3142,5 @@
         };
     </script>
 </body>
+<script src="./assets/atlaskit-forms.iife.js" defer></script>
 </html>
