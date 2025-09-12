@@ -8,6 +8,24 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="./config.js"></script>
     <style>
+        :root {
+            --ads-color-text: #172B4D;
+            --ads-color-surface: #FFFFFF;
+            --ads-color-surface-subtle: #F4F5F7;
+            --ads-color-border: #DFE1E6;
+            --ads-color-success: #36B37E;
+            --ads-color-danger: #FF5630;
+            --ads-color-warning: #FFAB00;
+            --ads-color-info: #2684FF;
+            --ads-elevation-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            --ads-radius: 10px;
+            --ads-space-050: 4px;
+            --ads-space-100: 8px;
+            --ads-space-150: 12px;
+            --ads-space-200: 16px;
+            --ads-space-300: 24px;
+            --ads-space-400: 32px;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -232,6 +250,37 @@
             border: 1px solid #bee5eb;
         }
 
+        /* Flags (toast-like notifications) */
+        .flag-container {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .flag {
+            min-width: 220px;
+            max-width: 360px;
+            background: var(--ads-color-surface);
+            color: var(--ads-color-text);
+            box-shadow: var(--ads-elevation-shadow);
+            border: 1px solid var(--ads-color-border);
+            border-left: 4px solid var(--ads-color-info);
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .flag.success { border-left-color: var(--ads-color-success); }
+        .flag.error { border-left-color: var(--ads-color-danger); }
+        .flag.warning { border-left-color: var(--ads-color-warning); }
+
+        /* Busy indicator */
+        .op-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: #555; }
+        .spinner { width: 16px; height: 16px; border: 2px solid #ccc; border-top-color: var(--ads-color-info); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         .status-pending {
             background: #fff3cd;
             color: #856404;
@@ -337,11 +386,12 @@
         }
 
         .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
+            background: var(--ads-color-surface);
+            padding: var(--ads-space-300);
+            border-radius: var(--ads-radius);
             text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: var(--ads-elevation-shadow);
+            color: var(--ads-color-text);
         }
 
         .stat-number {
@@ -361,9 +411,9 @@
         }
 
         .url-share {
-            background: #e8f4ff;
-            padding: 15px;
-            border-radius: 10px;
+            background: var(--ads-color-surface-subtle);
+            padding: var(--ads-space-200);
+            border-radius: var(--ads-radius);
             margin-top: 20px;
         }
 
@@ -376,7 +426,7 @@
         }
 
         .admin-url-section {
-            border: 2px solid #ff6b6b;
+            border: 2px solid var(--ads-color-danger);
             background: #fff5f5;
         }
 
@@ -658,6 +708,7 @@
                 <div class="controls">
                     <button class="btn" onclick="nextRotation()" id="nextBtn">次へ (交代実行)</button>
                     <button class="btn btn-danger" onclick="resetSession()">セッションリセット</button>
+                    <span id="opStatus" class="op-status hidden"><span class="spinner"></span><span id="opStatusText"></span></span>
                 </div>
 
                 <div class="queue-container">
@@ -736,6 +787,7 @@
             </div>
         </div>
     </div>
+    <div id="flagContainer" class="flag-container"></div>
 
     <script>
         // Supabase関連
@@ -745,6 +797,35 @@
         // ドラッグ&ドロップ関連
         let partySortable = null;
         let queueSortable = null;
+
+        // Flags (toast-like)
+        function showFlag(message, appearance = 'info', timeoutMs = 2000) {
+            try {
+                setBusy('交代中…');
+                const container = document.getElementById('flagContainer');
+                if (!container) return;
+                const el = document.createElement('div');
+                el.className = `flag ${appearance}`;
+                el.textContent = message;
+                container.appendChild(el);
+                setTimeout(() => {
+                    if (el && el.parentNode) el.parentNode.removeChild(el);
+                }, timeoutMs);
+            } catch (_) {}
+        }
+
+        function setBusy(text) {
+            const wrap = document.getElementById('opStatus');
+            const t = document.getElementById('opStatusText');
+            if (!wrap || !t) return;
+            if (text) {
+                wrap.classList.remove('hidden');
+                t.textContent = text;
+            } else {
+                wrap.classList.add('hidden');
+                t.textContent = '';
+            }
+        }
 
         // アプリケーションの状態管理
             let appState = {
@@ -1140,6 +1221,7 @@
                 isSavingUsers = true;
                 currentSavePromise = (async () => {
                     try {
+                        setBusy('保存中…');
                         const partyPayload = appState.party.map((user, index) => ({
                             user_id: user.id,
                             name: user.name,
@@ -1175,14 +1257,17 @@
                             } else {
                                 alert(`ユーザー保存エラー: ${error.message}`);
                             }
+                            showFlag('ユーザー保存に失敗しました', 'error');
                             return false;
                         }
 
                         console.log('✅ sync_session_snapshot completed');
+                        showFlag('保存完了', 'success');
                         return true;
                     } catch (error) {
                         console.error('❌ Exception saving users (RPC):', error);
                         alert(`ユーザー保存例外: ${error.message}`);
+                        showFlag('ユーザー保存エラー', 'error');
                         return false;
                     }
                 })();
@@ -1192,6 +1277,7 @@
                 } finally {
                     isSavingUsers = false;
                     currentSavePromise = null;
+                    setBusy(null);
                 }
                 // もし保存中にさらに変更が入っていれば、最新状態で再実行
             } while (saveQueued);
@@ -1608,16 +1694,19 @@
                     } else {
                         alert('交代処理に失敗しました');
                     }
+                    showFlag('交代に失敗しました', 'error');
                     return;
                 }
                 console.log('✅ rotate_session result:', data);
                 // DBの状態を再読込
                 await loadSessionFromSupabase(appState.sessionCode);
                 updateDisplay();
+                showFlag('交代完了', 'success');
             } finally {
                 appState.isRotating = false;
                 const nextBtn2 = document.getElementById('nextBtn');
                 if (nextBtn2) nextBtn2.disabled = false;
+                setBusy(null);
             }
         }
 
