@@ -46,6 +46,13 @@ function SetupForm() {
   const partyOptions = [2,3,4,5,6,7,8,9,10].map(v => ({ label: `${v}人パーティー`, value: v }));
   const rotationOptions = [1,2,3].map(v => ({ label: `${v}人ずつ交代`, value: v }));
 
+  // publish values for host
+  React.useEffect(() => {
+    try {
+      (window as any).setSetupValues && (window as any).setSetupValues({ masterName, partySize, rotationCount, approval });
+    } catch {}
+  }, [masterName, partySize, rotationCount, approval]);
+
   return (
     <Box>
       <Stack space="space.200">
@@ -70,6 +77,13 @@ function SetupForm() {
     </Box>
   );
 }
+
+// expose live setup values for host to consume safely
+(function exposeSetupGetter(){
+  const obj: any = {};
+  (window as any).getSetupValues = () => obj.values || null;
+  (window as any).setSetupValues = (v: any) => { obj.values = v; };
+})();
 
 function ManagementSettings() {
   const [partySize, setPartySize] = React.useState<number>(5);
