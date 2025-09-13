@@ -888,6 +888,27 @@
     <div id="ariaAnnouncements" aria-live="polite" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"></div>
 
     <script>
+        // Debug logging gate: suppress verbose logs unless explicitly enabled
+        (function () {
+            try {
+                const qs = new URLSearchParams(window.location.search);
+                const stored = String(localStorage.getItem('debug') || '').toLowerCase();
+                const enabled = qs.has('debug') || stored === '1' || stored === 'true';
+                if (!enabled) {
+                    const noop = () => {};
+                    // Keep warn/error for important signals; silence noisy logs by default
+                    console.debug = noop;
+                    console.log = noop;
+                    console.info = noop;
+                } else {
+                    console.log('[debug] Verbose logging enabled');
+                }
+                // Helper to toggle and persist debug mode (reloads to apply early)
+                window.setDebugLogging = (on) => {
+                    try { localStorage.setItem('debug', on ? '1' : '0'); location.reload(); } catch {}
+                };
+            } catch {}
+        })();
         // i18n scaffold (ja default)
         const MESSAGES = {
             ja: {
