@@ -69,6 +69,7 @@ session_users(id, session_id, user_id, name, position['party'|'queue'], order_in
 pending_registrations(id, session_id, name, status['pending'|'approved'|'rejected'], requested_at, approved_at)
 ```
 - RPC `rotate_session` はアドバイザリロックで交代を原子的に処理し、`order_index` を正規化
+  - 複数人同時交代時は抽出順に基づく一意の仮インデックスを割当て、正規化時も安定順序（`order_index, user_id`）となるよう調整済み
 - RPC `sync_session_snapshot` はフロントのスナップショットを UPSERT＋削除で反映
 
 ## テーマ/ブランド

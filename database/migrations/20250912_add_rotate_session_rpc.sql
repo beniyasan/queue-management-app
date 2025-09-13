@@ -36,13 +36,13 @@ BEGIN
              WHERE session_id = v_session.id
                AND position = 'party'
                AND COALESCE(is_fixed, false) = false
-             ORDER BY order_index
+            ORDER BY order_index, created_at, user_id
         ), q AS (
             SELECT user_id
               FROM public.session_users
              WHERE session_id = v_session.id
                AND position = 'queue'
-             ORDER BY order_index
+            ORDER BY order_index, created_at, user_id
         )
         SELECT LEAST(v_session.rotation_count, (SELECT COUNT(*) FROM rotatable)) AS rotation_amount,
                LEAST((SELECT COUNT(*) FROM q),
@@ -50,47 +50,51 @@ BEGIN
           INTO v_rotation_amount, v_available_replacements;
 
         IF v_available_replacements > 0 THEN
-            -- Move out from party to queue (non-fixed)
+            -- Snapshot to_join and to_leave from pre-update state; assign order deterministically
             WITH to_leave AS (
-                SELECT user_id
+                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, created_at, user_id) AS rn
                   FROM public.session_users
                  WHERE session_id = v_session.id
                    AND position = 'party'
                    AND COALESCE(is_fixed, false) = false
-                 ORDER BY order_index
+                 ORDER BY order_index, created_at, user_id
                  LIMIT v_available_replacements
-            ), moved_leave AS (
-                UPDATE public.session_users su
-                   SET position = 'queue',
-                       order_index = (SELECT COALESCE(MAX(order_index)+1,0)
-                                        FROM public.session_users
-                                       WHERE session_id = v_session.id AND position = 'queue')
-                  FROM to_leave tl
-                 WHERE su.session_id = v_session.id
-                   AND su.user_id = tl.user_id
-                 RETURNING su.user_id
             ), to_join AS (
-                SELECT user_id
+                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, created_at, user_id) AS rn
                   FROM public.session_users
                  WHERE session_id = v_session.id
                    AND position = 'queue'
-                 ORDER BY order_index
+                 ORDER BY order_index, created_at, user_id
                  LIMIT v_available_replacements
+            ), queue_base AS (
+                SELECT COALESCE(MAX(order_index)+1,0) AS base
+                  FROM public.session_users
+                 WHERE session_id = v_session.id AND position = 'queue'
+            ), moved_leave AS (
+                UPDATE public.session_users su
+                   SET position = 'queue',
+                       order_index = (SELECT base FROM queue_base) + tl.rn - 1
+                  FROM to_leave tl
+                 WHERE su.session_id = v_session.id
+                   AND su.user_id = tl.user_id
+                 RETURNING su.user_id, tl.rn
+            ), party_base AS (
+                SELECT COALESCE(MAX(order_index)+1,0) AS base
+                  FROM public.session_users
+                 WHERE session_id = v_session.id AND position = 'party'
             ), moved_join AS (
                 UPDATE public.session_users su
                    SET position = 'party',
-                       order_index = (SELECT COALESCE(MAX(order_index)+1,0)
-                                        FROM public.session_users
-                                       WHERE session_id = v_session.id AND position = 'party')
+                       order_index = (SELECT base FROM party_base) + tj.rn - 1
                   FROM to_join tj
                  WHERE su.session_id = v_session.id
                    AND su.user_id = tj.user_id
-                 RETURNING su.user_id
+                 RETURNING su.user_id, tj.rn
             )
-            SELECT COALESCE(array_agg(moved_join.user_id), ARRAY[]::INT[]),
-                   COALESCE(array_agg(moved_leave.user_id), ARRAY[]::INT[])
+            SELECT COALESCE(array_agg(mj.user_id ORDER BY mj.rn), ARRAY[]::INT[]),
+                   COALESCE(array_agg(ml.user_id ORDER BY ml.rn), ARRAY[]::INT[])
               INTO v_moved_in, v_moved_out
-              FROM moved_join FULL OUTER JOIN moved_leave ON FALSE;
+              FROM moved_join mj FULL OUTER JOIN moved_leave ml ON FALSE;
         END IF;
 
         -- Fill shortage to party_size from queue
@@ -101,26 +105,28 @@ BEGIN
         ), shortage AS (
             SELECT GREATEST(0, v_session.party_size - c) AS need FROM party_count
         ), extra AS (
-            SELECT user_id
+            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, created_at, user_id) AS rn
               FROM public.session_users
              WHERE session_id = v_session.id AND position = 'queue'
-             ORDER BY order_index
+             ORDER BY order_index, created_at, user_id
              LIMIT (SELECT need FROM shortage)
+        ), party_base AS (
+            SELECT COALESCE(MAX(order_index)+1,0) AS base
+              FROM public.session_users
+             WHERE session_id = v_session.id AND position = 'party'
         )
         UPDATE public.session_users su
            SET position = 'party',
-               order_index = (SELECT COALESCE(MAX(order_index)+1,0)
-                                FROM public.session_users
-                               WHERE session_id = v_session.id AND position = 'party')
+               order_index = (SELECT base FROM party_base) + e.rn - 1
           FROM extra e
          WHERE su.session_id = v_session.id AND su.user_id = e.user_id;
 
         -- Normalize order_index (party)
         WITH ranked_party AS (
-            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) - 1 AS rn
+            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, created_at, user_id) - 1 AS rn
               FROM public.session_users
              WHERE session_id = v_session.id AND position = 'party'
-             ORDER BY order_index
+             ORDER BY order_index, created_at, user_id
         )
         UPDATE public.session_users su
            SET order_index = rp.rn
@@ -129,10 +135,10 @@ BEGIN
 
         -- Normalize order_index (queue)
         WITH ranked_queue AS (
-            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) - 1 AS rn
+            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, created_at, user_id) - 1 AS rn
               FROM public.session_users
              WHERE session_id = v_session.id AND position = 'queue'
-             ORDER BY order_index
+             ORDER BY order_index, created_at, user_id
         )
         UPDATE public.session_users su
            SET order_index = rq.rn
@@ -152,4 +158,3 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 GRANT EXECUTE ON FUNCTION public.rotate_session(text, text) TO anon, authenticated;
 
 COMMIT;
-
