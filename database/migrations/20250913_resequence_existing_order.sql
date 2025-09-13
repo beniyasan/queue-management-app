@@ -8,7 +8,7 @@ WITH ranked_party AS (
   SELECT su.session_id, su.user_id,
          ROW_NUMBER() OVER (
            PARTITION BY su.session_id, su.position
-           ORDER BY su.order_index, su.user_id
+           ORDER BY su.order_index, su.created_at, su.user_id
          ) - 1 AS rn
   FROM public.session_users su
   WHERE su.position = 'party'
@@ -25,7 +25,7 @@ WITH ranked_queue AS (
   SELECT su.session_id, su.user_id,
          ROW_NUMBER() OVER (
            PARTITION BY su.session_id, su.position
-           ORDER BY su.order_index, su.user_id
+           ORDER BY su.order_index, su.created_at, su.user_id
          ) - 1 AS rn
   FROM public.session_users su
   WHERE su.position = 'queue'
@@ -38,4 +38,3 @@ WHERE su.session_id = rq.session_id
   AND su.position = 'queue';
 
 COMMIT;
-
