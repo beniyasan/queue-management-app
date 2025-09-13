@@ -52,7 +52,7 @@ BEGIN
         IF v_available_replacements > 0 THEN
             -- 抜ける: party先頭からavailable分（固定除外済み）を決定的順序で移動
             WITH to_leave AS (
-                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) AS rn
+                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, user_id) AS rn
                   FROM session_users
                  WHERE session_id = v_session.id
                    AND position = 'party'
@@ -78,7 +78,7 @@ BEGIN
 
             -- 入る: queue先頭からavailable分を決定的順序で移動
             WITH to_join AS (
-                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) AS rn
+                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, user_id) AS rn
                   FROM session_users
                  WHERE session_id = v_session.id
                    AND position = 'queue'
@@ -110,7 +110,7 @@ BEGIN
         ), shortage AS (
             SELECT GREATEST(0, v_session.party_size - c) AS need FROM party_count
         ), extra AS (
-            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) AS rn
+            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, user_id) AS rn
               FROM session_users
              WHERE session_id = v_session.id AND position = 'queue'
              ORDER BY order_index

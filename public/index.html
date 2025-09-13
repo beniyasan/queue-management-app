@@ -1510,7 +1510,8 @@
                     .select('*')
                     .eq('session_id', sessionData.id)
                     .order('position', { ascending: true })
-                    .order('order_index', { ascending: true });
+                    .order('order_index', { ascending: true })
+                    .order('user_id', { ascending: true });
 
                 if (usersError) {
                     console.error('Error loading users:', usersError);

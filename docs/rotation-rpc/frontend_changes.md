@@ -51,3 +51,15 @@
 - 交代プレビュー（ハイライト）は既存の `computeRotationPreview()` を表示用に維持可能
 - DnD等、他の操作は現状踏襲（本PRでは交代の原子化のみ）
 
+## 追記: 一覧取得順の安定化
+- サーバ側の正規化・抽出と同一のタイブレーク（`user_id`）に合わせるため、一覧取得のorderを二段から三段に変更します。
+
+```js
+const { data: usersData } = await supabase
+  .from('session_users')
+  .select('*')
+  .eq('session_id', sessionData.id)
+  .order('position', { ascending: true })
+  .order('order_index', { ascending: true })
+  .order('user_id', { ascending: true });
+```

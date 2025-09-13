@@ -52,7 +52,7 @@ BEGIN
         IF v_available_replacements > 0 THEN
             -- Move out from party to queue (non-fixed) with deterministic ordering
             WITH to_leave AS (
-                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) AS rn
+                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, user_id) AS rn
                   FROM public.session_users
                  WHERE session_id = v_session.id
                    AND position = 'party'
@@ -78,7 +78,7 @@ BEGIN
 
             -- Move in from queue to party with deterministic ordering
             WITH to_join AS (
-                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) AS rn
+                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, user_id) AS rn
                   FROM public.session_users
                  WHERE session_id = v_session.id
                    AND position = 'queue'
@@ -110,7 +110,7 @@ BEGIN
         ), shortage AS (
             SELECT GREATEST(0, v_session.party_size - c) AS need FROM party_count
         ), extra AS (
-            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) AS rn
+            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, user_id) AS rn
               FROM public.session_users
              WHERE session_id = v_session.id AND position = 'queue'
              ORDER BY order_index
