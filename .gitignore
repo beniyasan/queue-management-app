@@ -10,3 +10,7 @@ BLOG_ARTICLE_PART2.md
 # Ignore root-level markdown except README.md
 /*.md
 !/README.md
+
+# Ignore MCP config
+/.mcp.json
+/base.png

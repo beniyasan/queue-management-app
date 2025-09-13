@@ -987,6 +987,14 @@
         window.getAppState = () => appState;
         window.applyDnD = async (newParty, newQueue) => {
             try {
+                // Defensive guard: do not allow exceeding partySize
+                try {
+                    if (Array.isArray(newParty) && typeof appState.partySize === 'number' && newParty.length > appState.partySize) {
+                        showFlag && showFlag('パーティーが満員のため移動できません', 'error');
+                        updateDisplay();
+                        return;
+                    }
+                } catch (_) {}
                 appState.party = newParty;
                 appState.queue = newQueue;
                 await saveUsersToSupabase();

@@ -244,6 +244,11 @@ function DndManager() {
     let newParty = clone(party);
     let newQueue = clone(queue);
 
+    // party size constraint from host state (fallback to current length)
+    const partySize = (() => {
+      try { return (window as any).getAppState ? (window as any).getAppState().partySize : newParty.length; } catch { return newParty.length; }
+    })();
+
     const moveWithin = (arr: User[], from: number, to: number) => {
       const item = arr.splice(from, 1)[0];
       arr.splice(to, 0, item);
@@ -263,6 +268,11 @@ function DndManager() {
       if (u && u.isFixed) return;
       moveBetween(newParty, newQueue, source.index, destination.index);
     } else if (source.droppableId === 'queue' && destination.droppableId === 'party') {
+      // prevent exceeding party capacity
+      if (newParty.length >= partySize) {
+        try { (window as any).showFlag && (window as any).showFlag('パーティーが満員のため移動できません', 'warning'); } catch {}
+        return;
+      }
       moveBetween(newQueue, newParty, source.index, destination.index);
     }
 
