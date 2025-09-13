@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { createPortal } from 'react-dom';
 import Textfield from '@atlaskit/textfield';
 import Select from '@atlaskit/select';
 import Checkbox from '@atlaskit/checkbox';
@@ -303,7 +304,42 @@ function DndManager() {
   }, [party, queue, rotationCount]);
 
   const renderList = (id: 'party'|'queue', items: User[]) => (
-    <Droppable droppableId={id}>
+    <Droppable
+      droppableId={id}
+      renderClone={(provided, snapshot, rubric) => {
+        const srcItems = id === 'party' ? party : queue;
+        const u = srcItems[rubric.source.index];
+        const node = (
+          <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} style={{
+            background: 'var(--ads-color-surface)', border: '1px solid var(--ads-color-border)', borderRadius: 8,
+            padding: 10, marginBottom: 8, boxShadow: 'var(--ads-elevation-shadow)', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            ...provided.draggableProps.style
+          }}>
+            <span>
+              {u?.name}{u?.isFixed ? ' 👑' : ''}
+              {u?.isFixed ? <span className="lozenge loz-fixed" style={{ marginLeft: 8 }}>固定</span> : null}
+              {id === 'party' && u && preview.outIds.has(u.id) ? <span className="lozenge loz-out" style={{ marginLeft: 8 }}>次に退出</span> : null}
+              {id === 'queue' && u && preview.inIds.has(u.id) ? <span className="lozenge loz-in" style={{ marginLeft: 8 }}>次に参加</span> : null}
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: '#6B778C', fontSize: 12 }}>{id === 'party' ? (rubric.source.index + 1) : `待機${rubric.source.index + 1}`}</span>
+            </span>
+          </div>
+        );
+        try {
+          const portalId = 'rbd-portal';
+          let portal = document.getElementById(portalId);
+          if (!portal) {
+            portal = document.createElement('div');
+            portal.id = portalId;
+            document.body.appendChild(portal);
+          }
+          return createPortal(node, portal);
+        } catch {
+          return node;
+        }
+      }}
+    >
       {(provided) => (
         <div ref={provided.innerRef} {...provided.droppableProps}>
           {items.map((u, idx) => (
