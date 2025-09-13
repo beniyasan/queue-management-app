@@ -12,12 +12,8 @@
 
 ```mermaid
 graph LR
-  A[Browser
-  public/index.html
-  静的SPA] -- React Islands(IIFE) --> B[Islands
-  atlaskit-forms.iife.js]
-  A -- Fetch/Realtime/RPC --> C[Supabase
-  Postgres + RPC + Realtime]
+  A["Browser<br/>public/index.html<br/>静的SPA"] -- React Islands(IIFE) --> B["Islands<br/>atlaskit-forms.iife.js"]
+  A -- Fetch/Realtime/RPC --> C["Supabase<br/>Postgres + RPC + Realtime"]
   C -->|Edge Function(掃除)| D[cleanup-sessions]
   B <--> A
 ```
@@ -68,8 +64,7 @@ graph LR
 
 ```mermaid
 flowchart TD
-  U[ユーザー] --> F[SetupForm
-  (Atlaskit)]
+  U[ユーザー] --> F["SetupForm<br/>(Atlaskit)"]
   F -->|startSession()| H[ホストJS]
   H -->|session/users 保存| DB[(Supabase)]
   H -->|URL更新| H
@@ -104,7 +99,7 @@ flowchart TD
 ```mermaid
 flowchart TD
   C[Creator: 次へクリック] --> R[ローカル保存の完了待ち]
-  R --> X[supabase.rpc('rotate_session')]
+  R --> X["supabase.rpc('rotate_session')"]
   X -->|DB内原子的処理| DB[(Postgres)]
   DB --> L[最新セッション読込]
   L --> U[画面更新]
@@ -153,4 +148,3 @@ flowchart TD
 - DnD のレガシー経路（Sortable）を段階的に廃止し一本化。
 - DnD 容量制約や交代不変条件の E2E テスト整備。
 - 承認制の通知/更新を Realtime Events で強化し、UI を最適化。
-
