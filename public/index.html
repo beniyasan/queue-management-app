@@ -501,6 +501,8 @@
         .hidden {
             display: none;
         }
+        /* Ensure setup section hides after session start even with ID-level display */
+        #setupSection.hidden { display: none !important; }
 
         .url-share {
             background: var(--ads-color-surface-subtle);
