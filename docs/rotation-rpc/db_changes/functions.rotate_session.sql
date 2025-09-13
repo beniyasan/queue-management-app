@@ -50,47 +50,56 @@ BEGIN
           INTO v_rotation_amount, v_available_replacements;
 
         IF v_available_replacements > 0 THEN
-            -- 抜ける: party先頭からavailable分（固定除外済み）
+            -- 抜ける: party先頭からavailable分（固定除外済み）を決定的順序で移動
             WITH to_leave AS (
-                SELECT user_id
+                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) AS rn
                   FROM session_users
                  WHERE session_id = v_session.id
                    AND position = 'party'
                    AND COALESCE(is_fixed, false) = false
                  ORDER BY order_index
                  LIMIT v_available_replacements
+            ), queue_base AS (
+                SELECT COALESCE(MAX(order_index)+1,0) AS base
+                  FROM session_users
+                 WHERE session_id = v_session.id AND position = 'queue'
             ), moved_leave AS (
                 UPDATE session_users su
                    SET position = 'queue',
-                       order_index = (SELECT COALESCE(MAX(order_index)+1,0)
-                                        FROM session_users
-                                       WHERE session_id = v_session.id AND position = 'queue')
+                       order_index = (SELECT base FROM queue_base) + tl.rn - 1
                   FROM to_leave tl
                  WHERE su.session_id = v_session.id
                    AND su.user_id = tl.user_id
-                 RETURNING su.user_id
-            ), to_join AS (
-                SELECT user_id
+                 RETURNING su.user_id, tl.rn
+            )
+            SELECT COALESCE(array_agg(user_id ORDER BY rn), ARRAY[]::INT[])
+              INTO v_moved_out
+              FROM moved_leave;
+
+            -- 入る: queue先頭からavailable分を決定的順序で移動
+            WITH to_join AS (
+                SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) AS rn
                   FROM session_users
                  WHERE session_id = v_session.id
                    AND position = 'queue'
                  ORDER BY order_index
                  LIMIT v_available_replacements
+            ), party_base AS (
+                SELECT COALESCE(MAX(order_index)+1,0) AS base
+                  FROM session_users
+                 WHERE session_id = v_session.id AND position = 'party'
             ), moved_join AS (
                 UPDATE session_users su
                    SET position = 'party',
-                       order_index = (SELECT COALESCE(MAX(order_index)+1,0)
-                                        FROM session_users
-                                       WHERE session_id = v_session.id AND position = 'party')
+                       order_index = (SELECT base FROM party_base) + tj.rn - 1
                   FROM to_join tj
                  WHERE su.session_id = v_session.id
                    AND su.user_id = tj.user_id
-                 RETURNING su.user_id
+                 RETURNING su.user_id, tj.rn
             )
-            SELECT COALESCE(array_agg(moved_join.user_id), ARRAY[]::INT[]),
-                   COALESCE(array_agg(moved_leave.user_id), ARRAY[]::INT[])
-              INTO v_moved_in, v_moved_out
-              FROM moved_join FULL OUTER JOIN moved_leave ON FALSE;
+            SELECT COALESCE(array_agg(user_id ORDER BY rn), ARRAY[]::INT[])
+              INTO v_moved_in
+              FROM moved_join;
         END IF;
 
         -- 不足補充（party_sizeまでqueue先頭から補充）
@@ -101,23 +110,25 @@ BEGIN
         ), shortage AS (
             SELECT GREATEST(0, v_session.party_size - c) AS need FROM party_count
         ), extra AS (
-            SELECT user_id
+            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) AS rn
               FROM session_users
              WHERE session_id = v_session.id AND position = 'queue'
              ORDER BY order_index
              LIMIT (SELECT need FROM shortage)
+        ), party_base AS (
+            SELECT COALESCE(MAX(order_index)+1,0) AS base
+              FROM session_users
+             WHERE session_id = v_session.id AND position = 'party'
         )
         UPDATE session_users su
            SET position = 'party',
-               order_index = (SELECT COALESCE(MAX(order_index)+1,0)
-                                FROM session_users
-                               WHERE session_id = v_session.id AND position = 'party')
+               order_index = (SELECT base FROM party_base) + e.rn - 1
           FROM extra e
          WHERE su.session_id = v_session.id AND su.user_id = e.user_id;
 
         -- order_index を 0..N-1 に正規化（party）
         WITH ranked_party AS (
-            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) - 1 AS rn
+            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, user_id) - 1 AS rn
               FROM session_users
              WHERE session_id = v_session.id AND position = 'party'
              ORDER BY order_index
@@ -129,7 +140,7 @@ BEGIN
 
         -- order_index を 0..N-1 に正規化（queue）
         WITH ranked_queue AS (
-            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index) - 1 AS rn
+            SELECT user_id, ROW_NUMBER() OVER (ORDER BY order_index, user_id) - 1 AS rn
               FROM session_users
              WHERE session_id = v_session.id AND position = 'queue'
              ORDER BY order_index
@@ -151,4 +162,3 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 実行権限（必要に応じて調整）
 GRANT EXECUTE ON FUNCTION rotate_session(text, text) TO anon, authenticated;
-

@@ -6,7 +6,10 @@
 - 排他: セッションコードに基づくアドバイザリロックで直列化
 - ロジック: 既存の交代アルゴリズムに厳密一致（固定除外、交代数、不足補充）
 - 並び: 最後に party / queue の `order_index` を 0..N-1 で正規化
+- 決定性: 複数人同時交代時に `MAX(order_index)+1` の同値割当で相対順が不定になる問題を解消。
+  - `to_leave` / `to_join` / 不足補充の抽出に `ROW_NUMBER()` を付与し、
+    更新時は `base + rn - 1` で一意の `order_index` を割当てる方式へ変更
+  - 最終正規化は `ORDER BY order_index, user_id` にし、タイの明確化で安定順序を担保
 - 返却: `moved_in`, `moved_out`（user_id配列）
 - 付帯: `session_users` にユニーク制約・推奨インデックスを追加
 - フロント: `nextRotation()` を `supabase.rpc('rotate_session', ...)` 呼び出しへ置換（実行中は連打無効）
-
