@@ -3,6 +3,7 @@ import { SetupForm } from './components/SetupForm';
 import { ManagementSettings } from './components/ManagementSettings';
 import { DndManager } from './components/DndManager';
 import { mountIfPresent } from './utils/mount';
+import { hideLegacyControls } from './utils/legacy';
 
 // expose live setup values for host to consume safely
 (function exposeSetupGetter(){
@@ -15,34 +16,15 @@ export function init() {
   mountIfPresent('setupFormMount', <SetupForm />);
 
   // Hide legacy form controls to avoid duplicate UI, but keep them in DOM for compatibility
-  try {
-    document.body.classList.add('ak-mounted');
-    const toHideIds = [
-      'masterName',
-      'partySize',
-      'rotationCount',
-      'approvalRequired',
-      'currentPartySize',
-      'currentRotationCount',
-      'currentRegistrationMode',
-    ];
-    toHideIds.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) {
-        const group = el.closest('.form-group, .setting-group') as HTMLElement | null;
-        if (group) {
-          group.style.display = 'none';
-          group.setAttribute('aria-hidden', 'true');
-        } else {
-          // as a fallback, hide the element itself
-          (el as HTMLElement).style.display = 'none';
-          el.setAttribute('aria-hidden', 'true');
-        }
-      }
-    });
-  } catch (e) {
-    // no-op
-  }
+  hideLegacyControls([
+    'masterName',
+    'partySize',
+    'rotationCount',
+    'approvalRequired',
+    'currentPartySize',
+    'currentRotationCount',
+    'currentRegistrationMode',
+  ]);
 }
 
 export function mountManagement() {

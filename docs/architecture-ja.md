@@ -28,6 +28,7 @@ graph LR
   - ログ制御: 既定で `console.log/info/debug` を抑制。`?debug` 付与 or `setDebugLogging(true)` で有効化。
 
 - React Islands: `src/atlaskit-forms.tsx` → `public/assets/atlaskit-forms.iife.js`
+  - 構成: `src/components/{SetupForm, ManagementSettings, DndManager}.tsx` に分割、`src/utils/{mount, legacy}.ts` を利用。
   - SetupForm: 初期セットアップ（主ユーザー名、パーティー人数、承認制）を強化。既存DOMへ値を同期し互換性維持。
   - ManagementSettings: パーティー人数・交代人数・登録モードの管理。変更は既存DOMに反映し、ホストのロジックを呼び出し。
   - DnD Island: `react-beautiful-dnd` によるパーティー/キューの並べ替え・移動。

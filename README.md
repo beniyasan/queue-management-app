@@ -16,6 +16,9 @@
 - フロントエンド
   - `public/index.html`（静的ベース + JS）
   - React Islands: `src/atlaskit-forms.tsx`（Viteで IIFE ビルド → `public/assets/atlaskit-forms.iife.js`）
+    - Components: `src/components/{SetupForm,ManagementSettings,DndManager}.tsx`
+    - Utilities: `src/utils/{mount,legacy}.ts`
+    - Types: `src/types.ts`
   - DnD: `react-beautiful-dnd`
 - データベース（Supabase/Postgres）
   - テーブル: `sessions`, `session_users`, `pending_registrations`
