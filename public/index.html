@@ -666,6 +666,14 @@
             }
         }
     </style>
+
+    <script id="env-config">
+        window.APP_CONFIG = {
+            supabaseUrl: '',
+            supabaseKey: ''
+        };
+        console.log('Environment config embedded:', { hasUrl: !!window.APP_CONFIG.supabaseUrl, hasKey: !!window.APP_CONFIG.supabaseKey });
+    </script>
 </head>
 <body>
     <a href="#mainContent" class="skip-link">メインコンテンツへスキップ</a>
