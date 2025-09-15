@@ -1,7 +1,6 @@
-// Vercel環境変数を静的ファイルとして出力
-// このファイルはビルド時に生成される
-
+// Generated configuration file
 window.APP_CONFIG = {
-  supabaseUrl: '{{ SUPABASE_URL }}',
-  supabaseKey: '{{ SUPABASE_ANON_KEY }}'
+  supabaseUrl: '',
+  supabaseKey: ''
 };
+console.log('Config loaded:', { hasUrl: !!window.APP_CONFIG.supabaseUrl, hasKey: !!window.APP_CONFIG.supabaseKey });
