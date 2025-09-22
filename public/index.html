@@ -810,6 +810,7 @@
 
                 <div class="controls">
                     <button class="btn" onclick="nextRotation()" id="nextBtn">次へ (交代実行)</button>
+                    <button class="btn" style="background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);" onclick="openOverlayWindow()" id="overlayBtn" title="配信用のオーバーレイを別ウィンドウで開きます">配信用オーバーレイを開く</button>
                     <button class="btn btn-danger" onclick="resetSession()">セッションリセット</button>
                     <span id="opStatus" class="op-status hidden"><span class="spinner"></span><span id="opStatusText"></span></span>
                 </div>
@@ -963,6 +964,7 @@
         // ドラッグ&ドロップ関連
         let partySortable = null;
         let queueSortable = null;
+        let overlayWindow = null;
 
         // Flags (toast-like)
         function showFlag(message, appearance = 'info', timeoutMs = 2000) {
@@ -1958,6 +1960,134 @@
             }
         }
 
+        function openOverlayWindow() {
+            try {
+                if (overlayWindow && !overlayWindow.closed) {
+                    overlayWindow.focus();
+                    updateOverlay();
+                    return;
+                }
+                const features = 'width=480,height=720,resizable=yes';
+                overlayWindow = window.open('', 'queuePartyOverlay', features);
+                if (!overlayWindow) {
+                    alert('オーバーレイウィンドウを開けませんでした。ポップアップブロックを解除してください。');
+                    return;
+                }
+                const currentWindow = overlayWindow;
+                const overlayHtml = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>Queue Party Overlay</title>
+<style>
+    :root { color-scheme: dark; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; background: transparent; color: #f8fafc; }
+    .overlay-container { min-height: 100vh; padding: 24px; display: flex; flex-direction: column; gap: 16px; background: rgba(15,23,42,0.72); backdrop-filter: blur(12px); }
+    .section { border-radius: 18px; padding: 18px 22px; border: 1px solid rgba(148,163,184,0.35); background: rgba(15,23,42,0.78); box-shadow: 0 16px 36px rgba(15,23,42,0.45); }
+    .section h2 { margin: 0 0 12px; font-size: 18px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .section.next-out h2 { color: #f87171; }
+    .section.next-in h2 { color: #34d399; }
+    .section.waiting h2 { color: #60a5fa; }
+    ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    li { font-size: 28px; font-weight: 600; line-height: 1.2; }
+    li small { display: block; font-size: 14px; font-weight: 500; letter-spacing: 0.08em; opacity: 0.72; margin-top: 4px; }
+    .placeholder { font-size: 20px; opacity: 0.6; font-weight: 500; }
+    .footer { text-align: right; font-size: 12px; letter-spacing: 0.08em; opacity: 0.7; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="overlay-container">
+    <div class="section next-out">
+        <h2>次に退出</h2>
+        <ul id="overlayNextOut"></ul>
+    </div>
+    <div class="section next-in">
+        <h2>次に参加</h2>
+        <ul id="overlayNextIn"></ul>
+    </div>
+    <div class="section waiting">
+        <h2>待機中</h2>
+        <ul id="overlayWaiting"></ul>
+    </div>
+    <div class="footer">更新: <span id="overlayTimestamp">--:--:--</span></div>
+</div>
+</body>
+</html>`;
+                currentWindow.document.open();
+                currentWindow.document.write(overlayHtml);
+                currentWindow.document.close();
+                currentWindow.addEventListener('beforeunload', () => {
+                    if (overlayWindow === currentWindow) {
+                        overlayWindow = null;
+                    }
+                });
+                updateOverlay();
+                setTimeout(updateOverlay, 100);
+            } catch (e) {
+                console.error('Failed to open overlay window:', e);
+                alert('オーバーレイの作成中にエラーが発生しました。');
+            }
+        }
+
+        function updateOverlay() {
+            if (!overlayWindow || overlayWindow.closed) {
+                overlayWindow = null;
+                return;
+            }
+            try {
+                const doc = overlayWindow.document;
+                if (!doc) return;
+                const nextOutList = doc.getElementById('overlayNextOut');
+                const nextInList = doc.getElementById('overlayNextIn');
+                const waitingList = doc.getElementById('overlayWaiting');
+                if (!nextOutList || !nextInList || !waitingList) {
+                    return;
+                }
+                const { nextJoiningIds, nextLeavingIds } = computeRotationPreview();
+                const nextOutUsers = appState.party.filter(user => nextLeavingIds.has(user.id));
+                const nextInUsers = appState.queue.filter(user => nextJoiningIds.has(user.id));
+                const waitingUsers = appState.queue.filter(user => !nextJoiningIds.has(user.id));
+
+                const fillList = (element, users, emptyLabel, withPosition = false, offset = 0) => {
+                    if (!element) return;
+                    element.innerHTML = '';
+                    if (!users.length) {
+                        const placeholder = doc.createElement('li');
+                        placeholder.className = 'placeholder';
+                        placeholder.textContent = emptyLabel;
+                        element.appendChild(placeholder);
+                        return;
+                    }
+                    users.forEach((user, index) => {
+                        const item = doc.createElement('li');
+                        item.textContent = `${user.name}${user.isFixed ? ' 👑' : ''}`;
+                        if (withPosition) {
+                            const meta = doc.createElement('small');
+                            meta.textContent = `待機${offset + index + 1}`;
+                            item.appendChild(meta);
+                        }
+                        element.appendChild(item);
+                    });
+                };
+
+                fillList(nextOutList, nextOutUsers, '退出予定者なし');
+                fillList(nextInList, nextInUsers, '参加予定者なし');
+                fillList(waitingList, waitingUsers, '待機者なし', true, nextInUsers.length);
+
+                const timestamp = doc.getElementById('overlayTimestamp');
+                if (timestamp) {
+                    const now = new Date();
+                    const hh = String(now.getHours()).padStart(2, '0');
+                    const mm = String(now.getMinutes()).padStart(2, '0');
+                    const ss = String(now.getSeconds()).padStart(2, '0');
+                    timestamp.textContent = `${hh}:${mm}:${ss}`;
+                }
+            } catch (e) {
+                console.warn('updateOverlay failed:', e);
+            }
+        }
+
+
         // ユーザー削除
         async function removeUser(id, fromParty) {
             if (id === 0) {
@@ -1995,6 +2125,7 @@
             } else {
                 updateViewerDisplay();
             }
+            updateOverlay();
         }
 
         // 管理者用表示更新
