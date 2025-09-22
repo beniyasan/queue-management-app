@@ -965,6 +965,7 @@
         let partySortable = null;
         let queueSortable = null;
         let overlayWindow = null;
+        const hiddenOverlaySections = new Set();
 
         // Flags (toast-like)
         function showFlag(message, appearance = 'info', timeoutMs = 2000) {
@@ -1974,6 +1975,7 @@
                     return;
                 }
                 const currentWindow = overlayWindow;
+                hiddenOverlaySections.clear();
                 const overlayHtml = `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -1982,12 +1984,15 @@
 <style>
     :root { color-scheme: dark; }
     body { margin: 0; font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; background: transparent; color: #f8fafc; }
-    .overlay-container { min-height: 100vh; padding: 24px; display: flex; flex-direction: column; gap: 16px; background: rgba(15,23,42,0.72); backdrop-filter: blur(12px); }
-    .section { border-radius: 18px; padding: 18px 22px; border: 1px solid rgba(148,163,184,0.35); background: rgba(15,23,42,0.78); box-shadow: 0 16px 36px rgba(15,23,42,0.45); }
-    .section h2 { margin: 0 0 12px; font-size: 18px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .overlay-container { min-height: 100vh; padding: 24px; display: flex; flex-direction: column; gap: 16px; background: transparent; }
+    .section { display: flex; flex-direction: column; gap: 12px; }
+    .section-header { display: flex; align-items: center; gap: 12px; }
+    .section-header h2 { margin: 0; font-size: 18px; letter-spacing: 0.08em; text-transform: uppercase; }
     .section.next-out h2 { color: #f87171; }
     .section.next-in h2 { color: #34d399; }
     .section.waiting h2 { color: #60a5fa; }
+    .close-btn { margin-left: auto; font-size: 20px; line-height: 1; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; }
+    .close-btn:hover { color: #f87171; }
     ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
     li { font-size: 28px; font-weight: 600; line-height: 1.2; }
     li small { display: block; font-size: 14px; font-weight: 500; letter-spacing: 0.08em; opacity: 0.72; margin-top: 4px; }
@@ -1997,20 +2002,42 @@
 </head>
 <body>
 <div class="overlay-container">
-    <div class="section next-out">
-        <h2>次に退出</h2>
+    <div class="section next-out" id="sectionNextOut">
+        <div class="section-header">
+            <h2>次に退出</h2>
+            <button type="button" class="close-btn" data-section="nextOut" aria-label="次に退出を非表示">×</button>
+        </div>
         <ul id="overlayNextOut"></ul>
     </div>
-    <div class="section next-in">
-        <h2>次に参加</h2>
+    <div class="section next-in" id="sectionNextIn">
+        <div class="section-header">
+            <h2>次に参加</h2>
+            <button type="button" class="close-btn" data-section="nextIn" aria-label="次に参加を非表示">×</button>
+        </div>
         <ul id="overlayNextIn"></ul>
     </div>
-    <div class="section waiting">
-        <h2>待機中</h2>
+    <div class="section waiting" id="sectionWaiting">
+        <div class="section-header">
+            <h2>待機中</h2>
+            <button type="button" class="close-btn" data-section="waiting" aria-label="待機中を非表示">×</button>
+        </div>
         <ul id="overlayWaiting"></ul>
     </div>
     <div class="footer">更新: <span id="overlayTimestamp">--:--:--</span></div>
 </div>
+<script>
+    (function() {
+        document.addEventListener('click', function (event) {
+            const trigger = event.target.closest('[data-section]');
+            if (!trigger) return;
+            const section = trigger.getAttribute('data-section');
+            if (!section) return;
+            if (window.opener && typeof window.opener.hideOverlaySection === 'function') {
+                window.opener.hideOverlaySection(section);
+            }
+        });
+    })();
+</script>
 </body>
 </html>`;
                 currentWindow.document.open();
@@ -2019,6 +2046,7 @@
                 currentWindow.addEventListener('beforeunload', () => {
                     if (overlayWindow === currentWindow) {
                         overlayWindow = null;
+                        hiddenOverlaySections.clear();
                     }
                 });
                 updateOverlay();
@@ -2027,6 +2055,11 @@
                 console.error('Failed to open overlay window:', e);
                 alert('オーバーレイの作成中にエラーが発生しました。');
             }
+        }
+
+        function hideOverlaySection(sectionKey) {
+            hiddenOverlaySections.add(sectionKey);
+            updateOverlay();
         }
 
         function updateOverlay() {
@@ -2040,8 +2073,20 @@
                 const nextOutList = doc.getElementById('overlayNextOut');
                 const nextInList = doc.getElementById('overlayNextIn');
                 const waitingList = doc.getElementById('overlayWaiting');
+                const sectionNextOut = doc.getElementById('sectionNextOut');
+                const sectionNextIn = doc.getElementById('sectionNextIn');
+                const sectionWaiting = doc.getElementById('sectionWaiting');
                 if (!nextOutList || !nextInList || !waitingList) {
                     return;
+                }
+                if (sectionNextOut) {
+                    sectionNextOut.style.display = hiddenOverlaySections.has('nextOut') ? 'none' : '';
+                }
+                if (sectionNextIn) {
+                    sectionNextIn.style.display = hiddenOverlaySections.has('nextIn') ? 'none' : '';
+                }
+                if (sectionWaiting) {
+                    sectionWaiting.style.display = hiddenOverlaySections.has('waiting') ? 'none' : '';
                 }
                 const { nextJoiningIds, nextLeavingIds } = computeRotationPreview();
                 const nextOutUsers = appState.party.filter(user => nextLeavingIds.has(user.id));
