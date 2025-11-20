@@ -1,37 +1,78 @@
 import React from 'react';
 import { Box, Inline } from '@atlaskit/primitives';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { User } from '../types';
 import { createPortal } from 'react-dom';
+import { User } from '../types';
+
+const DRAGGABLE_PORTAL_ID = 'rbd-portal';
+
+const getAppState = () => {
+  try {
+    return (window as any).getAppState?.();
+  } catch {
+    return null;
+  }
+};
+
+const normalizeUsers = (users?: any[]): User[] => (users || []).map((u) => ({ id: u.id, name: u.name, isFixed: !!u.isFixed }));
+
+const hideLegacyList = (elementId: string) => {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  const section = element.closest('.queue-section') as HTMLElement | null;
+  (section || element).style.display = 'none';
+};
+
+const ensureDraggablePortal = (node: React.ReactNode) => {
+  try {
+    let portal = document.getElementById(DRAGGABLE_PORTAL_ID);
+    if (!portal) {
+      portal = document.createElement('div');
+      portal.id = DRAGGABLE_PORTAL_ID;
+      document.body.appendChild(portal);
+    }
+    return createPortal(node, portal);
+  } catch {
+    return node;
+  }
+};
+
+const computePreview = (party: User[], queue: User[], rotationCount: number) => {
+  try {
+    const rotatable = party.filter((user) => !user.isFixed);
+    const rotationAmount = Math.min(rotationCount || 1, rotatable.length);
+    const available = Math.min(queue.length, rotationAmount);
+    if (available <= 0) return { inIds: new Set<number>(), outIds: new Set<number>() };
+    const nextLeaving = rotatable.slice(0, available);
+    const nextJoining = queue.slice(0, available);
+    return {
+      inIds: new Set<number>(nextJoining.map((u) => u.id)),
+      outIds: new Set<number>(nextLeaving.map((u) => u.id)),
+    };
+  } catch {
+    return { inIds: new Set<number>(), outIds: new Set<number>() };
+  }
+};
 
 function useInitialUsers() {
-  const initialParty: User[] = (window as any).getAppState ? (window as any).getAppState().party : [];
-  const initialQueue: User[] = (window as any).getAppState ? (window as any).getAppState().queue : [];
-  const [party, setParty] = React.useState<User[]>(initialParty);
-  const [queue, setQueue] = React.useState<User[]>(initialQueue);
+  const initialAppState = React.useMemo(() => getAppState(), []);
+  const [party, setParty] = React.useState<User[]>(() => normalizeUsers(initialAppState?.party));
+  const [queue, setQueue] = React.useState<User[]>(() => normalizeUsers(initialAppState?.queue));
 
   React.useEffect(() => {
     (window as any).useAtlaskitDnd = true;
-    try {
-      const partyList = document.getElementById('partyList');
-      const queueList = document.getElementById('queueList');
-      const hideSection = (el: HTMLElement | null) => {
-        if (!el) return;
-        const section = el.closest('.queue-section') as HTMLElement | null;
-        if (section) section.style.display = 'none'; else (el as HTMLElement).style.display = 'none';
-      };
-      hideSection(partyList as HTMLElement | null);
-      hideSection(queueList as HTMLElement | null);
-    } catch {}
+    hideLegacyList('partyList');
+    hideLegacyList('queueList');
   }, []);
 
   React.useEffect(() => {
-    (window as any).refreshDnd = () => {
-      const s = (window as any).getAppState ? (window as any).getAppState() : null;
-      if (!s) return;
-      setParty((s.party || []).map((x: any) => ({ id: x.id, name: x.name, isFixed: !!x.isFixed })));
-      setQueue((s.queue || []).map((x: any) => ({ id: x.id, name: x.name, isFixed: !!x.isFixed })));
+    const refreshFromAppState = (state = getAppState()) => {
+      if (!state) return;
+      setParty(normalizeUsers(state.party));
+      setQueue(normalizeUsers(state.queue));
     };
+
+    (window as any).refreshDnd = () => refreshFromAppState();
     return () => {
       try {
         delete (window as any).refreshDnd;
@@ -50,39 +91,34 @@ export function DndManager() {
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    const clone = (arr: User[]) => arr.map((x) => ({ ...x }));
-    let newParty = clone(party);
-    let newQueue = clone(queue);
+    const cloneUsers = (list: User[]) => list.map((user) => ({ ...user }));
+    const newParty = cloneUsers(party);
+    const newQueue = cloneUsers(queue);
 
-    const partySize = (() => {
-      try {
-        return (window as any).getAppState ? (window as any).getAppState().partySize : newParty.length;
-      } catch {
-        return newParty.length;
-      }
-    })();
+    const partySize = getAppState()?.partySize ?? newParty.length;
 
     const moveWithin = (arr: User[], from: number, to: number) => {
-      const item = arr.splice(from, 1)[0];
+      const [item] = arr.splice(from, 1);
       arr.splice(to, 0, item);
     };
+
     const moveBetween = (fromArr: User[], toArr: User[], from: number, to: number) => {
-      const item = fromArr.splice(from, 1)[0];
+      const [item] = fromArr.splice(from, 1);
       toArr.splice(to, 0, item);
     };
 
-    if (source.droppableId === 'party' && destination.droppableId === 'party') {
-      moveWithin(newParty, source.index, destination.index);
-    } else if (source.droppableId === 'queue' && destination.droppableId === 'queue') {
-      moveWithin(newQueue, source.index, destination.index);
+    const isMovingWithin = source.droppableId === destination.droppableId;
+    if (isMovingWithin) {
+      const targetArr = source.droppableId === 'party' ? newParty : newQueue;
+      moveWithin(targetArr, source.index, destination.index);
     } else if (source.droppableId === 'party' && destination.droppableId === 'queue') {
-      const u = newParty[source.index];
-      if (u && u.isFixed) return;
+      const movedUser = newParty[source.index];
+      if (movedUser?.isFixed) return;
       moveBetween(newParty, newQueue, source.index, destination.index);
     } else if (source.droppableId === 'queue' && destination.droppableId === 'party') {
       if (newParty.length >= partySize) {
         try {
-          (window as any).showFlag && (window as any).showFlag('パーティーが満員のため移動できません', 'warning');
+          (window as any).showFlag?.('パーティーが満員のため移動できません', 'warning');
         } catch {}
         return;
       }
@@ -96,30 +132,12 @@ export function DndManager() {
     }
   };
 
-  const rotationCount = (() => {
-    try {
-      return (window as any).getAppState ? (window as any).getAppState().rotationCount : 1;
-    } catch {
-      return 1;
-    }
-  })();
+  const rotationCount = getAppState()?.rotationCount ?? 1;
 
-  const preview = React.useMemo(() => {
-    try {
-      const rotatable = party.filter((u) => !u.isFixed);
-      const rotationAmount = Math.min(rotationCount || 1, rotatable.length);
-      const available = Math.min(queue.length, rotationAmount);
-      if (available <= 0) return { inIds: new Set<number>(), outIds: new Set<number>() };
-      const nextLeaving = rotatable.slice(0, available);
-      const nextJoining = queue.slice(0, available);
-      return {
-        inIds: new Set<number>(nextJoining.map((u) => u.id)),
-        outIds: new Set<number>(nextLeaving.map((u) => u.id)),
-      };
-    } catch {
-      return { inIds: new Set<number>(), outIds: new Set<number>() };
-    }
-  }, [party, queue, rotationCount]);
+  const preview = React.useMemo(
+    () => computePreview(party, queue, rotationCount),
+    [party, queue, rotationCount],
+  );
 
   const renderList = (id: 'party' | 'queue', items: User[]) => (
     <Droppable
@@ -171,18 +189,8 @@ export function DndManager() {
             </span>
           </div>
         );
-        try {
-          const portalId = 'rbd-portal';
-          let portal = document.getElementById(portalId);
-          if (!portal) {
-            portal = document.createElement('div');
-            (portal as HTMLElement).id = portalId;
-            document.body.appendChild(portal);
-          }
-          return createPortal(node, portal);
-        } catch {
-          return node;
-        }
+
+        return ensureDraggablePortal(node);
       }}
     >
       {(provided) => (
