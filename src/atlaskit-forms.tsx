@@ -37,4 +37,5 @@ export function initDnd() {
 
 // Keep the global override aligned with current behavior
 // Expose mounting helpers to window.FormsMount (index.html checks existence for optional features)
-(window as any).FormsMount = { init, initDnd, mountManagement };
+const existingMounts = (window as any).FormsMount || {};
+(window as any).FormsMount = { ...existingMounts, init, initDnd, mountManagement };
