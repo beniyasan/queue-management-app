@@ -826,12 +826,17 @@
         }
     </style>
 
+    
+
+    
+
     <script id="env-config">
         window.APP_CONFIG = {
             supabaseUrl: '',
-            supabaseKey: ''
+            supabaseKey: '',
+            youtubeApiKey: ''
         };
-        console.log('Environment config embedded:', { hasUrl: !!window.APP_CONFIG.supabaseUrl, hasKey: !!window.APP_CONFIG.supabaseKey });
+        console.log('Environment config embedded:', { hasUrl: !!window.APP_CONFIG.supabaseUrl, hasKey: !!window.APP_CONFIG.supabaseKey, hasYoutubeKey: !!window.APP_CONFIG.youtubeApiKey });
     </script>
 </head>
 
@@ -981,6 +986,40 @@
                     <h3>🔔 参加申請管理</h3>
                     <div id="pendingRegistrationsList" class="pending-registrations-list">
                         <p style="color: #666; font-style: italic;">現在、保留中の申請はありません</p>
+                    </div>
+                </div>
+
+                <!-- YouTube Live 連携セクション -->
+                <div id="youtubeSection" class="settings-panel">
+                    <h3>📺 YouTube Live 連携</h3>
+                    <div id="youtubeSettingsMount"></div>
+                    <!-- Fallback UI if React component doesn't load -->
+                    <div id="youtubeFallbackUI">
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="youtubeUrl">YouTube Live URL:</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." style="flex: 1;">
+                                <button class="btn" onclick="connectYouTube()" id="youtubeConnectBtn" style="padding: 8px 16px;">接続テスト</button>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="youtubeKeyword">トリガーキーワード:</label>
+                            <input type="text" id="youtubeKeyword" value="!参加" style="max-width: 200px;">
+                            <small style="color: #666; font-size: 12px; display: block; margin-top: 4px;">
+                                視聴者がこのキーワードをコメントすると自動的に参加登録されます
+                            </small>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label>
+                                <input type="checkbox" id="youtubeEnabled" onchange="toggleYouTubeIntegration()" style="margin-right: 8px;">
+                                YouTube Live 連携を有効にする
+                            </label>
+                        </div>
+                        <div id="youtubeStatus" style="padding: 8px 12px; background: #f3f4f6; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
+                            <span id="youtubeStatusDot" style="width: 8px; height: 8px; border-radius: 50%; background: #6b7280;"></span>
+                            <span id="youtubeStatusText" style="font-size: 14px; color: #374151;">未接続</span>
+                            <span id="youtubeProcessedCount" style="margin-left: auto; font-size: 12px; color: #6b7280; display: none;">処理済み: 0 メッセージ</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1193,7 +1232,22 @@
             userRegistrationName: null, // 申請時の名前を保存
             isLoadingPendingRegistrations: false, // 重複読み込み防止
             creatorToken: null, // 管理者用ランダムトークン
-            isRotating: false // 交代処理の多重実行防止
+            isRotating: false, // 交代処理の多重実行防止
+            // YouTube Live連携
+            youtube: {
+                enabled: false,
+                videoId: null,
+                videoUrl: '',
+                chatId: null,
+                keyword: '!参加',
+                nextPageToken: null,
+                pollingInterval: null,
+                processedMessageIds: new Set(),
+                processedCount: 0,
+                status: 'disconnected', // 'disconnected', 'connecting', 'connected', 'error'
+                streamTitle: '',
+                errorMessage: ''
+            }
         };
 
         // Expose interop for DnD island
@@ -1731,6 +1785,9 @@
                         if (rotationCountSelect) rotationCountSelect.value = appState.rotationCount;
                         if (approvalCheckbox) approvalCheckbox.checked = appState.approvalRequired;
                     }, 100);
+
+                    // YouTube設定を読み込み
+                    loadYouTubeSettingsFromSupabase(sessionData);
                 }
 
                 if (usersData) {
@@ -2030,6 +2087,17 @@
             try {
                 if (window && window.FormsMount && window.FormsMount.mountManagement) {
                     window.FormsMount.mountManagement();
+                }
+            } catch (_) { }
+
+            // YouTube連携UIを初期化
+            updateYouTubeSectionVisibility();
+            try {
+                if (window && window.FormsMount && window.FormsMount.mountYouTube) {
+                    window.FormsMount.mountYouTube();
+                    // ReactコンポーネントがマウントされたらフォールバックUIを非表示
+                    const fallback = document.getElementById('youtubeFallbackUI');
+                    if (fallback) fallback.style.display = 'none';
                 }
             } catch (_) { }
         }
@@ -2848,12 +2916,498 @@ ${'</scr' + 'ipt>'}
                 appState.queue = [];
                 appState.userIdCounter = 1;
 
+                // YouTube連携を停止
+                stopYouTubeIntegration();
+
                 // Supabaseに保存
                 await saveUsersToSupabase();
 
                 updateDisplay();
             }
         }
+
+        // =====================================================
+        // YouTube Live 連携機能
+        // =====================================================
+
+        // YouTube動画IDを抽出
+        function extractYouTubeVideoId(url) {
+            if (!url) return null;
+            try {
+                const urlObj = new URL(url);
+                if (urlObj.hostname === 'youtu.be') {
+                    return urlObj.pathname.slice(1).split('?')[0] || null;
+                }
+                if (urlObj.hostname.includes('youtube.com')) {
+                    const vParam = urlObj.searchParams.get('v');
+                    if (vParam) return vParam;
+                    const liveMatch = urlObj.pathname.match(/\/live\/([^/?]+)/);
+                    if (liveMatch) return liveMatch[1];
+                    const embedMatch = urlObj.pathname.match(/\/embed\/([^/?]+)/);
+                    if (embedMatch) return embedMatch[1];
+                }
+                return null;
+            } catch {
+                const patterns = [
+                    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/live\/)([^&?\s]+)/,
+                    /^([a-zA-Z0-9_-]{11})$/
+                ];
+                for (const pattern of patterns) {
+                    const match = url.match(pattern);
+                    if (match) return match[1];
+                }
+                return null;
+            }
+        }
+
+        // YouTube APIキーが設定されているかチェック
+        function hasYouTubeApiKey() {
+            return !!(window.APP_CONFIG && window.APP_CONFIG.youtubeApiKey);
+        }
+
+        // YouTube接続状態を更新
+        function updateYouTubeStatus(status, message = '', streamTitle = '') {
+            appState.youtube.status = status;
+            appState.youtube.errorMessage = message;
+            appState.youtube.streamTitle = streamTitle;
+
+            const statusDot = document.getElementById('youtubeStatusDot');
+            const statusText = document.getElementById('youtubeStatusText');
+            const processedCount = document.getElementById('youtubeProcessedCount');
+
+            if (statusDot && statusText) {
+                let color = '#6b7280';
+                let text = '未接続';
+
+                switch (status) {
+                    case 'connected':
+                        color = '#22c55e';
+                        text = `接続中: ${streamTitle || '配信'}`;
+                        break;
+                    case 'connecting':
+                        color = '#f59e0b';
+                        text = '接続中...';
+                        break;
+                    case 'error':
+                        color = '#ef4444';
+                        text = `エラー: ${message}`;
+                        break;
+                    default:
+                        color = '#6b7280';
+                        text = '未接続';
+                }
+
+                statusDot.style.background = color;
+                statusText.textContent = text;
+            }
+
+            if (processedCount) {
+                if (status === 'connected') {
+                    processedCount.style.display = 'inline';
+                    processedCount.textContent = `処理済み: ${appState.youtube.processedCount} メッセージ`;
+                } else {
+                    processedCount.style.display = 'none';
+                }
+            }
+
+            // React componentへの更新通知
+            try {
+                if (window.refreshYouTubeSettings) window.refreshYouTubeSettings();
+            } catch (_) {}
+        }
+
+        // YouTube Live配信情報を取得
+        async function fetchYouTubeVideoInfo(videoId) {
+            const apiKey = window.APP_CONFIG?.youtubeApiKey;
+            if (!apiKey) throw new Error('YouTube API キーが設定されていません');
+
+            const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails&id=${videoId}&key=${apiKey}`;
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.error?.message || `YouTube API エラー: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (!data.items || data.items.length === 0) {
+                throw new Error('動画が見つかりませんでした');
+            }
+
+            const video = data.items[0];
+            const liveDetails = video.liveStreamingDetails;
+
+            return {
+                title: video.snippet?.title || 'Unknown',
+                liveChatId: liveDetails?.activeLiveChatId || null,
+                isLive: !!liveDetails?.activeLiveChatId
+            };
+        }
+
+        // YouTube Liveチャットメッセージを取得
+        async function fetchYouTubeChatMessages(chatId, pageToken = null) {
+            const apiKey = window.APP_CONFIG?.youtubeApiKey;
+            if (!apiKey) throw new Error('YouTube API キーが設定されていません');
+
+            let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${chatId}&part=snippet,authorDetails&key=${apiKey}`;
+            if (pageToken) url += `&pageToken=${pageToken}`;
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                if (response.status === 403) {
+                    if (error.error?.errors?.[0]?.reason === 'liveChatEnded') {
+                        throw new Error('ライブ配信が終了しました');
+                    }
+                    throw new Error('APIクォータを超過しました');
+                }
+                throw new Error(error.error?.message || `YouTube API エラー: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const messages = (data.items || []).map(item => ({
+                id: item.id,
+                authorDisplayName: item.authorDetails?.displayName || 'Unknown',
+                authorChannelId: item.authorDetails?.channelId || '',
+                messageText: item.snippet?.displayMessage || '',
+                publishedAt: item.snippet?.publishedAt || ''
+            }));
+
+            return {
+                nextPageToken: data.nextPageToken || null,
+                pollingIntervalMillis: data.pollingIntervalMillis || 5000,
+                messages
+            };
+        }
+
+        // メッセージがキーワードを含むかチェック
+        function messageContainsKeyword(message, keyword) {
+            if (!message || !keyword) return false;
+            const normalizedMessage = message.trim().toLowerCase();
+            const normalizedKeyword = keyword.trim().toLowerCase();
+            return normalizedMessage === normalizedKeyword ||
+                   normalizedMessage.startsWith(normalizedKeyword + ' ') ||
+                   normalizedMessage.startsWith(normalizedKeyword + '　');
+        }
+
+        // ユーザー名をサニタイズ
+        function sanitizeYouTubeUsername(name) {
+            if (!name) return '';
+            return name.trim().replace(/[<>'"&\\]/g, '').slice(0, 50);
+        }
+
+        // YouTube接続テスト
+        async function connectYouTube(url, keyword) {
+            const videoUrl = url || document.getElementById('youtubeUrl')?.value;
+            const triggerKeyword = keyword || document.getElementById('youtubeKeyword')?.value || '!参加';
+
+            if (!videoUrl) {
+                showFlag('YouTube URLを入力してください', 'error');
+                return false;
+            }
+
+            if (!hasYouTubeApiKey()) {
+                showFlag('YouTube API キーが設定されていません', 'error');
+                updateYouTubeStatus('error', 'APIキー未設定');
+                return false;
+            }
+
+            const videoId = extractYouTubeVideoId(videoUrl);
+            if (!videoId) {
+                showFlag('無効なYouTube URLです', 'error');
+                updateYouTubeStatus('error', '無効なURL');
+                return false;
+            }
+
+            updateYouTubeStatus('connecting');
+
+            try {
+                const videoInfo = await fetchYouTubeVideoInfo(videoId);
+
+                if (!videoInfo.isLive || !videoInfo.liveChatId) {
+                    showFlag('この動画はライブ配信中ではありません', 'error');
+                    updateYouTubeStatus('error', 'ライブ配信ではありません');
+                    return false;
+                }
+
+                appState.youtube.videoId = videoId;
+                appState.youtube.videoUrl = videoUrl;
+                appState.youtube.chatId = videoInfo.liveChatId;
+                appState.youtube.keyword = triggerKeyword;
+                appState.youtube.streamTitle = videoInfo.title;
+
+                updateYouTubeStatus('connected', '', videoInfo.title);
+                showFlag(`「${videoInfo.title}」に接続しました`, 'success');
+
+                return true;
+            } catch (error) {
+                console.error('YouTube接続エラー:', error);
+                showFlag(error.message || 'YouTube接続に失敗しました', 'error');
+                updateYouTubeStatus('error', error.message);
+                return false;
+            }
+        }
+
+        // YouTube連携を有効化/無効化
+        async function toggleYouTubeIntegration() {
+            const checkbox = document.getElementById('youtubeEnabled');
+            const enabled = checkbox?.checked;
+
+            if (enabled) {
+                await startYouTubeIntegration();
+            } else {
+                stopYouTubeIntegration();
+            }
+        }
+
+        // YouTube連携を開始
+        async function startYouTubeIntegration(url, keyword) {
+            // まず接続テストを実行
+            if (!appState.youtube.chatId) {
+                const connected = await connectYouTube(url, keyword);
+                if (!connected) {
+                    const checkbox = document.getElementById('youtubeEnabled');
+                    if (checkbox) checkbox.checked = false;
+                    return;
+                }
+            }
+
+            appState.youtube.enabled = true;
+            appState.youtube.processedMessageIds = new Set();
+            appState.youtube.processedCount = 0;
+
+            // 初回のメッセージ取得（次回以降のページトークンを取得）
+            try {
+                const result = await fetchYouTubeChatMessages(appState.youtube.chatId);
+                appState.youtube.nextPageToken = result.nextPageToken;
+
+                // 既存のメッセージIDを記録（重複処理を防ぐ）
+                result.messages.forEach(msg => {
+                    appState.youtube.processedMessageIds.add(msg.id);
+                });
+
+                // ポーリング開始
+                const interval = Math.max(result.pollingIntervalMillis, 5000);
+                appState.youtube.pollingInterval = setInterval(pollYouTubeChat, interval);
+
+                console.log(`YouTube Live ポーリング開始 (間隔: ${interval}ms)`);
+                showFlag('YouTube Live 連携を開始しました', 'success');
+                updateYouTubeStatus('connected', '', appState.youtube.streamTitle);
+
+                // DB保存
+                await saveYouTubeSettingsToSupabase();
+            } catch (error) {
+                console.error('YouTube連携開始エラー:', error);
+                showFlag(error.message || 'YouTube連携の開始に失敗しました', 'error');
+                updateYouTubeStatus('error', error.message);
+                appState.youtube.enabled = false;
+                const checkbox = document.getElementById('youtubeEnabled');
+                if (checkbox) checkbox.checked = false;
+            }
+        }
+
+        // YouTube連携を停止
+        function stopYouTubeIntegration() {
+            if (appState.youtube.pollingInterval) {
+                clearInterval(appState.youtube.pollingInterval);
+                appState.youtube.pollingInterval = null;
+            }
+
+            appState.youtube.enabled = false;
+            updateYouTubeStatus('disconnected');
+
+            const checkbox = document.getElementById('youtubeEnabled');
+            if (checkbox) checkbox.checked = false;
+
+            console.log('YouTube Live 連携を停止しました');
+        }
+
+        // YouTube Liveチャットをポーリング
+        async function pollYouTubeChat() {
+            if (!appState.youtube.enabled || !appState.youtube.chatId) return;
+
+            try {
+                const result = await fetchYouTubeChatMessages(
+                    appState.youtube.chatId,
+                    appState.youtube.nextPageToken
+                );
+
+                appState.youtube.nextPageToken = result.nextPageToken;
+
+                // 新着メッセージを処理
+                for (const msg of result.messages) {
+                    if (appState.youtube.processedMessageIds.has(msg.id)) continue;
+                    appState.youtube.processedMessageIds.add(msg.id);
+
+                    // キーワードチェック
+                    if (messageContainsKeyword(msg.messageText, appState.youtube.keyword)) {
+                        await handleYouTubeJoinRequest(msg.authorDisplayName, msg.authorChannelId);
+                    }
+                }
+
+                // 処理済みメッセージ数を更新
+                appState.youtube.processedCount = appState.youtube.processedMessageIds.size;
+                updateYouTubeStatus('connected', '', appState.youtube.streamTitle);
+
+            } catch (error) {
+                console.error('YouTube チャットポーリングエラー:', error);
+
+                if (error.message.includes('ライブ配信が終了') || error.message.includes('liveChatEnded')) {
+                    showFlag('ライブ配信が終了しました', 'warning');
+                    stopYouTubeIntegration();
+                } else if (error.message.includes('クォータ')) {
+                    showFlag('APIクォータを超過しました。しばらく待ってください。', 'error');
+                    // 一時的に間隔を延長
+                    if (appState.youtube.pollingInterval) {
+                        clearInterval(appState.youtube.pollingInterval);
+                        appState.youtube.pollingInterval = setInterval(pollYouTubeChat, 30000);
+                    }
+                }
+            }
+        }
+
+        // YouTubeからの参加リクエストを処理
+        async function handleYouTubeJoinRequest(displayName, channelId) {
+            const sanitizedName = sanitizeYouTubeUsername(displayName);
+            if (!sanitizedName) return;
+
+            // 重複チェック
+            if (isUserNameDuplicate(sanitizedName)) {
+                console.log(`YouTube参加リクエスト: ${sanitizedName} (重複のためスキップ)`);
+                return;
+            }
+
+            console.log(`YouTube参加リクエスト: ${sanitizedName}`);
+
+            // 登録モードに応じて処理
+            if (appState.registrationMode === 'direct') {
+                // 直接追加
+                const user = {
+                    id: appState.userIdCounter++,
+                    name: sanitizedName,
+                    joinedAt: new Date(),
+                    youtubeChannelId: channelId
+                };
+
+                if (appState.party.length < appState.partySize) {
+                    appState.party.push(user);
+                } else {
+                    appState.queue.push(user);
+                }
+
+                await saveUsersToSupabase();
+                updateDisplay();
+                showFlag(`${sanitizedName} さんが参加しました (YouTube)`, 'success');
+
+            } else if (appState.registrationMode === 'approval') {
+                // 承認待ちに追加
+                try {
+                    const { error } = await supabase
+                        .from('pending_registrations')
+                        .insert({
+                            session_id: appState.sessionId,
+                            name: sanitizedName,
+                            status: 'pending',
+                            requested_at: new Date().toISOString()
+                        });
+
+                    if (error) {
+                        console.error('承認待ち登録エラー:', error);
+                    } else {
+                        showFlag(`${sanitizedName} さんの参加申請を受け付けました`, 'info');
+                        await loadPendingRegistrations();
+                        updatePendingRegistrationsDisplay();
+                    }
+                } catch (error) {
+                    console.error('承認待ち登録エラー:', error);
+                }
+            }
+            // registrationMode === 'disabled' の場合は何もしない
+        }
+
+        // YouTube設定をSupabaseに保存
+        async function saveYouTubeSettingsToSupabase() {
+            if (!supabase || !appState.sessionId) return;
+
+            try {
+                const { error } = await supabase
+                    .from('sessions')
+                    .update({
+                        youtube_video_id: appState.youtube.videoId,
+                        youtube_chat_id: appState.youtube.chatId,
+                        youtube_keyword: appState.youtube.keyword,
+                        youtube_enabled: appState.youtube.enabled,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', appState.sessionId);
+
+                if (error) {
+                    console.error('YouTube設定保存エラー:', error);
+                }
+            } catch (error) {
+                console.error('YouTube設定保存エラー:', error);
+            }
+        }
+
+        // YouTube設定をSupabaseから読み込み
+        async function loadYouTubeSettingsFromSupabase(sessionData) {
+            if (!sessionData) return;
+
+            appState.youtube.videoId = sessionData.youtube_video_id || null;
+            appState.youtube.chatId = sessionData.youtube_chat_id || null;
+            appState.youtube.keyword = sessionData.youtube_keyword || '!参加';
+            appState.youtube.enabled = sessionData.youtube_enabled || false;
+
+            // UI更新
+            const urlInput = document.getElementById('youtubeUrl');
+            const keywordInput = document.getElementById('youtubeKeyword');
+            const enabledCheckbox = document.getElementById('youtubeEnabled');
+
+            if (urlInput && appState.youtube.videoId) {
+                urlInput.value = `https://www.youtube.com/watch?v=${appState.youtube.videoId}`;
+                appState.youtube.videoUrl = urlInput.value;
+            }
+            if (keywordInput) keywordInput.value = appState.youtube.keyword;
+            if (enabledCheckbox) enabledCheckbox.checked = appState.youtube.enabled;
+
+            // 有効な場合は自動的に再接続
+            if (appState.youtube.enabled && appState.youtube.chatId) {
+                try {
+                    const videoInfo = await fetchYouTubeVideoInfo(appState.youtube.videoId);
+                    if (videoInfo.isLive && videoInfo.liveChatId) {
+                        appState.youtube.streamTitle = videoInfo.title;
+                        await startYouTubeIntegration();
+                    } else {
+                        appState.youtube.enabled = false;
+                        updateYouTubeStatus('disconnected');
+                    }
+                } catch (error) {
+                    console.warn('YouTube再接続失敗:', error);
+                    appState.youtube.enabled = false;
+                    updateYouTubeStatus('error', error.message);
+                }
+            }
+        }
+
+        // YouTube設定セクションの表示/非表示
+        function updateYouTubeSectionVisibility() {
+            const section = document.getElementById('youtubeSection');
+            if (!section) return;
+
+            // APIキーがない場合は非表示
+            if (!hasYouTubeApiKey()) {
+                section.style.display = 'none';
+                return;
+            }
+
+            // 管理者のみ表示
+            section.style.display = appState.isCreator ? 'block' : 'none';
+        }
+
+        // =====================================================
+        // YouTube Live 連携機能 終了
+        // =====================================================
 
         // Enterキーでユーザー追加とセッション開始
         document.addEventListener('DOMContentLoaded', function () {

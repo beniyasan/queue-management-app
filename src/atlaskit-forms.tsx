@@ -2,6 +2,7 @@ import React from 'react';
 import { SetupForm } from './components/SetupForm';
 import { ManagementSettings } from './components/ManagementSettings';
 import { DndManager } from './components/DndManager';
+import { YouTubeSettings } from './components/YouTubeSettings';
 import { mountIfPresent } from './utils/mount';
 import { hideLegacyControls } from './utils/legacy';
 
@@ -35,6 +36,10 @@ export function initDnd() {
   mountIfPresent('dndMount', <DndManager />);
 }
 
+export function mountYouTube() {
+  mountIfPresent('youtubeSettingsMount', <YouTubeSettings />);
+}
+
 // Keep the global override aligned with current behavior
 // Only expose init to window.FormsMount (index.html checks existence for optional features)
-(window as any).FormsMount = { init };
+(window as any).FormsMount = { init, mountYouTube };
