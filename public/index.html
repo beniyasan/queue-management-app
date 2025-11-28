@@ -1250,7 +1250,7 @@
                 status: 'disconnected', // 'disconnected', 'connecting', 'connected', 'error'
                 streamTitle: '',
                 errorMessage: '',
-                useStreamList: true // streamList APIを使用するかどうか
+                useStreamList: false // streamList APIを使用するかどうか（現在はポーリングモードをデフォルト）
             }
         };
 
@@ -3613,25 +3613,17 @@ ${'</scr' + 'ipt>'}
                 appState.youtube.videoUrl = urlInput.value;
             }
             if (keywordInput) keywordInput.value = appState.youtube.keyword;
-            if (enabledCheckbox) enabledCheckbox.checked = appState.youtube.enabled;
-
-            // 有効な場合は自動的に再接続
-            if (appState.youtube.enabled && appState.youtube.chatId) {
-                try {
-                    const videoInfo = await fetchYouTubeVideoInfo(appState.youtube.videoId);
-                    if (videoInfo.isLive && videoInfo.liveChatId) {
-                        appState.youtube.streamTitle = videoInfo.title;
-                        await startYouTubeIntegration();
-                    } else {
-                        appState.youtube.enabled = false;
-                        updateYouTubeStatus('disconnected');
-                    }
-                } catch (error) {
-                    console.warn('YouTube再接続失敗:', error);
-                    appState.youtube.enabled = false;
-                    updateYouTubeStatus('error', error.message);
-                }
-            }
+            
+            // 自動再接続は無効化（ユーザーが手動で有効化する必要がある）
+            // DBにenabled=trueが保存されていても、ページ読み込み時は無効状態から開始
+            appState.youtube.enabled = false;
+            if (enabledCheckbox) enabledCheckbox.checked = false;
+            updateYouTubeStatus('disconnected');
+            
+            // React コンポーネントに通知
+            try {
+                if (window.refreshYouTubeSettings) window.refreshYouTubeSettings();
+            } catch (_) {}
         }
 
         // YouTube設定セクションの表示/非表示
