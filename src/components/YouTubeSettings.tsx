@@ -72,17 +72,26 @@ export function YouTubeSettings() {
     if (keywordInput) keywordInput.value = keyword;
   };
 
-  const handleEnabledChange = () => {
+  const handleEnabledChange = async () => {
     const newEnabled = !state.enabled;
+    
+    // 即座にUIを更新
+    setState(prev => ({ ...prev, enabled: newEnabled, status: newEnabled ? 'connecting' : 'disconnected' }));
     
     // Trigger the main app's toggle function
     try {
       if (newEnabled) {
-        setState(prev => ({ ...prev, enabled: true }));
-        (window as any).startYouTubeIntegration?.(state.videoUrl, state.keyword);
+        await (window as any).startYouTubeIntegration?.(state.videoUrl, state.keyword);
+        // 完了後に状態を同期
+        const appState = (window as any).getAppState?.();
+        if (appState?.youtube) {
+          setState(prev => ({
+            ...prev,
+            enabled: appState.youtube.enabled,
+            status: appState.youtube.status || 'disconnected'
+          }));
+        }
       } else {
-        // 即座にUIを更新
-        setState(prev => ({ ...prev, enabled: false, status: 'disconnected' }));
         (window as any).stopYouTubeIntegration?.();
       }
     } catch (e) {
