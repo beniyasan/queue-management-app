@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,8 +10,25 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="./config.js"></script>
     <style>
-        .skip-link { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
-        .skip-link:focus { position: static; width: auto; height: auto; padding: 8px 12px; background: #111827; color: #fff; border-radius: 6px; }
+        .skip-link {
+            position: absolute;
+            left: -10000px;
+            top: auto;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
+
+        .skip-link:focus {
+            position: static;
+            width: auto;
+            height: auto;
+            padding: 8px 12px;
+            background: #111827;
+            color: #fff;
+            border-radius: 6px;
+        }
+
         :root {
             --ads-color-text: #172B4D;
             --ads-color-surface: #FFFFFF;
@@ -20,7 +38,7 @@
             --ads-color-danger: #FF5630;
             --ads-color-warning: #FFAB00;
             --ads-color-info: #2684FF;
-            --ads-elevation-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            --ads-elevation-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             --ads-radius: 10px;
             --ads-space-050: 4px;
             --ads-space-100: 8px;
@@ -29,6 +47,7 @@
             --ads-space-300: 24px;
             --ads-space-400: 32px;
         }
+
         * {
             margin: 0;
             padding: 0;
@@ -41,16 +60,16 @@
             padding: 24px;
             /* theme background inspired by base.png */
             background: radial-gradient(65% 60% at 50% 18%, rgba(254, 215, 170, 0.45) 0%, rgba(254, 215, 170, 0.0) 45%),
-                        radial-gradient(110% 120% at 100% 0%, rgba(99, 102, 241, 0.75) 0%, rgba(99, 102, 241, 0.18) 60%, rgba(99,102,241,0.06) 100%),
-                        radial-gradient(110% 120% at 0% 100%, rgba(59, 130, 246, 0.75) 0%, rgba(59,130,246,0.18) 60%, rgba(59,130,246,0.06) 100%),
-                        #0b1220;
+                radial-gradient(110% 120% at 100% 0%, rgba(99, 102, 241, 0.75) 0%, rgba(99, 102, 241, 0.18) 60%, rgba(99, 102, 241, 0.06) 100%),
+                radial-gradient(110% 120% at 0% 100%, rgba(59, 130, 246, 0.75) 0%, rgba(59, 130, 246, 0.18) 60%, rgba(59, 130, 246, 0.06) 100%),
+                #0b1220;
             background-attachment: fixed;
         }
 
         .container {
             max-width: 1000px;
             margin: 0 auto;
-            background: rgba(255,255,255,0.9);
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 24px;
             box-shadow: 0 30px 90px rgba(88, 28, 135, 0.35), 0 0 0 1px rgba(139, 92, 246, 0.22);
             overflow: hidden;
@@ -63,7 +82,7 @@
             padding: 30px;
             text-align: center;
             border-bottom: 1px solid var(--ads-color-border);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
         }
 
         .brand {
@@ -71,6 +90,7 @@
             align-items: center;
             gap: 12px;
         }
+
         .brand-icon {
             width: 36px;
             height: 36px;
@@ -85,7 +105,7 @@
         }
 
         .session-info {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             padding: 15px;
             border-radius: 10px;
             margin-top: 20px;
@@ -95,11 +115,13 @@
             padding: 30px;
         }
 
-        .setup-section, .management-section {
+        .setup-section,
+        .management-section {
             margin-bottom: 30px;
         }
 
-        .setup-section h2, .management-section h2 {
+        .setup-section h2,
+        .management-section h2 {
             color: #333;
             margin-bottom: 20px;
             font-size: 1.5em;
@@ -116,7 +138,8 @@
             color: #555;
         }
 
-        .form-group select, .form-group input {
+        .form-group select,
+        .form-group input {
             width: 100%;
             padding: 12px;
             border: 2px solid #e1e1e1;
@@ -125,7 +148,8 @@
             transition: border-color 0.3s;
         }
 
-        .form-group select:focus, .form-group input:focus {
+        .form-group select:focus,
+        .form-group input:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -140,7 +164,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 12px 24px rgba(147,51,234,0.35);
+            box-shadow: 0 12px 24px rgba(147, 51, 234, 0.35);
         }
 
         .btn:hover {
@@ -155,7 +179,10 @@
             box-shadow: none;
         }
 
-        .btn:focus-visible { outline: 3px solid var(--ads-color-info); outline-offset: 2px; }
+        .btn:focus-visible {
+            outline: 3px solid var(--ads-color-info);
+            outline-offset: 2px;
+        }
 
         .btn-danger {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
@@ -205,7 +232,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
             transition: transform 0.2s;
         }
 
@@ -213,7 +240,10 @@
             transform: translateY(-2px);
         }
 
-        .pending-registrations-list[role="list"] { outline: none; }
+        .pending-registrations-list[role="list"] {
+            outline: none;
+        }
+
         .pending-registration-item {
             background: var(--ads-color-surface);
             border: 1px solid var(--ads-color-border);
@@ -226,9 +256,16 @@
             box-shadow: var(--ads-elevation-shadow);
         }
 
-        .pending-registration-name { font-weight: 600; color: var(--ads-color-text); }
+        .pending-registration-name {
+            font-weight: 600;
+            color: var(--ads-color-text);
+        }
 
-        .pending-registration-time { font-size: 12px; color: #6B778C; margin-top: 3px; }
+        .pending-registration-time {
+            font-size: 12px;
+            color: #6B778C;
+            margin-top: 3px;
+        }
 
         .pending-registration-actions {
             display: flex;
@@ -272,21 +309,56 @@
         }
 
         /* M3: List item polish + lozenges + focus */
-        .user-list[role="list"] { outline: none; }
+        .user-list[role="list"] {
+            outline: none;
+        }
+
         .user-item[role="listitem"] {
             border: 1px solid var(--ads-color-border);
             border-radius: 8px;
             padding: 10px 12px;
             background: var(--ads-color-surface);
             margin-bottom: 8px;
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .user-item[role="listitem"]:focus { outline: 2px solid var(--ads-color-info); outline-offset: 2px; }
-        .lozenge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-        .loz-fixed { background: #FFF0B3; color: #533F04; border: 1px solid #FFE380; }
-        .loz-in { background: #E3FCEF; color: #164B35; border: 1px solid #ABF5D1; }
-        .loz-out { background: #FFEBE6; color: #5D1F1A; border: 1px solid #FFBDAD; }
-        .hint { color: #6B778C; font-size: 12px; }
+
+        .user-item[role="listitem"]:focus {
+            outline: 2px solid var(--ads-color-info);
+            outline-offset: 2px;
+        }
+
+        .lozenge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .loz-fixed {
+            background: #FFF0B3;
+            color: #533F04;
+            border: 1px solid #FFE380;
+        }
+
+        .loz-in {
+            background: #E3FCEF;
+            color: #164B35;
+            border: 1px solid #ABF5D1;
+        }
+
+        .loz-out {
+            background: #FFEBE6;
+            color: #5D1F1A;
+            border: 1px solid #FFBDAD;
+        }
+
+        .hint {
+            color: #6B778C;
+            font-size: 12px;
+        }
 
         /* Flags (toast-like notifications) */
         .flag-container {
@@ -298,6 +370,7 @@
             flex-direction: column;
             gap: 8px;
         }
+
         .flag {
             min-width: 220px;
             max-width: 360px;
@@ -310,14 +383,43 @@
             border-radius: 6px;
             font-size: 14px;
         }
-        .flag.success { border-left-color: var(--ads-color-success); }
-        .flag.error { border-left-color: var(--ads-color-danger); }
-        .flag.warning { border-left-color: var(--ads-color-warning); }
+
+        .flag.success {
+            border-left-color: var(--ads-color-success);
+        }
+
+        .flag.error {
+            border-left-color: var(--ads-color-danger);
+        }
+
+        .flag.warning {
+            border-left-color: var(--ads-color-warning);
+        }
 
         /* Busy indicator */
-        .op-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: #555; }
-        .spinner { width: 16px; height: 16px; border: 2px solid #ccc; border-top-color: var(--ads-color-info); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .op-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ccc;
+            border-top-color: var(--ads-color-info);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         /* M5: skeletons & viewer banner */
         .skeleton {
             background: linear-gradient(90deg, #eee 25%, #f5f5f5 37%, #eee 63%);
@@ -325,14 +427,57 @@
             animation: shimmer 1.4s ease infinite;
             border-radius: 6px;
         }
-        @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-        .sk-line { height: 14px; margin: 6px 0; }
-        .sk-card { height: 56px; margin-bottom: 10px; }
-        .viewer-banner { border: 1px solid var(--ads-color-border); background: var(--ads-color-surface); color: var(--ads-color-text); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-        .dot.ok { background: #22c55e; }
-        .dot.warn { background: #f59e0b; }
-        .dot.err { background: #ef4444; }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 100% 0;
+            }
+
+            100% {
+                background-position: -100% 0;
+            }
+        }
+
+        .sk-line {
+            height: 14px;
+            margin: 6px 0;
+        }
+
+        .sk-card {
+            height: 56px;
+            margin-bottom: 10px;
+        }
+
+        .viewer-banner {
+            border: 1px solid var(--ads-color-border);
+            background: var(--ads-color-surface);
+            color: var(--ads-color-text);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot.ok {
+            background: #22c55e;
+        }
+
+        .dot.warn {
+            background: #f59e0b;
+        }
+
+        .dot.err {
+            background: #ef4444;
+        }
 
         .status-pending {
             background: #fff3cd;
@@ -405,17 +550,25 @@
             flex-direction: column;
             align-items: center;
         }
-        #setupSection h2 { text-align: center; }
-        #setupFormMount { /* Atlaskit form island wrapper */
+
+        #setupSection h2 {
+            text-align: center;
+        }
+
+        #setupFormMount {
+            /* Atlaskit form island wrapper */
             width: 100%;
             max-width: 520px;
             margin: 0 auto 8px;
         }
-        #setupSection .form-group { /* native fallback inputs */
+
+        #setupSection .form-group {
+            /* native fallback inputs */
             width: 100%;
             max-width: 520px;
             margin: 0 auto 12px;
         }
+
         #setupSection .form-group input,
         #setupSection .form-group select {
             width: 100%;
@@ -423,6 +576,7 @@
             margin-left: auto;
             margin-right: auto;
         }
+
         #setupSection .setup-actions {
             width: 100%;
             max-width: 520px;
@@ -432,6 +586,7 @@
             gap: 12px;
             margin: 12px auto 4px;
         }
+
         #setupSection .btn {
             padding: 10px 20px;
             border-radius: 10px;
@@ -501,8 +656,11 @@
         .hidden {
             display: none;
         }
+
         /* Ensure setup section hides after session start even with ID-level display */
-        #setupSection.hidden { display: none !important; }
+        #setupSection.hidden {
+            display: none !important;
+        }
 
         .url-share {
             background: var(--ads-color-surface-subtle);
@@ -632,7 +790,7 @@
         }
 
         .sortable-item.sortable-chosen {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
         /* ドラッグ中のプレースホルダー */
@@ -647,6 +805,7 @@
             border: 2px solid #27ae60 !important;
             box-shadow: 0 0 8px rgba(39, 174, 96, 0.4);
         }
+
         .highlight-next-out {
             border: 2px solid #e67e22 !important;
             box-shadow: 0 0 8px rgba(230, 126, 34, 0.4);
@@ -656,31 +815,51 @@
             .queue-container {
                 grid-template-columns: 1fr;
             }
-            
+
             .controls {
                 flex-direction: column;
             }
-            
+
             .add-user-form {
                 flex-direction: column;
             }
         }
     </style>
 
+    
+
+    
+
     <script id="env-config">
         window.APP_CONFIG = {
             supabaseUrl: '',
-            supabaseKey: ''
+            supabaseKey: '',
+            youtubeApiKey: ''
         };
-        console.log('Environment config embedded:', { hasUrl: !!window.APP_CONFIG.supabaseUrl, hasKey: !!window.APP_CONFIG.supabaseKey });
+        console.log('Environment config embedded:', { hasUrl: !!window.APP_CONFIG.supabaseUrl, hasKey: !!window.APP_CONFIG.supabaseKey, hasYoutubeKey: !!window.APP_CONFIG.youtubeApiKey });
     </script>
 </head>
+
 <body>
     <a href="#mainContent" class="skip-link">メインコンテンツへスキップ</a>
     <div class="container">
+        <div style="text-align: right; padding: 10px;">
+            <a href="/modern.html" style="
+                display: inline-block;
+                background: linear-gradient(135deg, #8b5cf6, #ec4899);
+                color: white;
+                text-decoration: none;
+                padding: 6px 12px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: bold;
+                box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
+            ">Try Modern Beta</a>
+        </div>
         <div class="header">
             <div class="brand">
-                <img src="./assets/queue-party-icon.png" alt="Queue Party icon" class="brand-icon" onerror="this.onerror=null; this.src='./gameicon.png'; this.style.display='inline-block'">
+                <img src="./assets/queue-party-icon.png" alt="Queue Party icon" class="brand-icon"
+                    onerror="this.onerror=null; this.src='./gameicon.png'; this.style.display='inline-block'">
                 <h1>Queue Party</h1>
             </div>
             <div id="sessionInfo" class="session-info hidden">
@@ -691,7 +870,8 @@
                 <div id="sessionInfoContent" class="session-info-content collapsed">
                     <p><strong>セッションコード:</strong> <span id="sessionCode"></span></p>
                     <p><strong>作成者:</strong> <span id="creatorStatus"></span></p>
-                    <p id="connectionStatus" style="display: none;"><strong>接続状態:</strong> <span id="connectionStatusText">接続中...</span></p>
+                    <p id="connectionStatus" style="display: none;"><strong>接続状態:</strong> <span
+                            id="connectionStatusText">接続中...</span></p>
                 </div>
             </div>
         </div>
@@ -701,12 +881,12 @@
             <div id="setupSection" class="setup-section">
                 <h2>新しいセッションを開始</h2>
                 <div id="setupFormMount" style="margin-bottom: 16px;"></div>
-                
+
                 <div class="form-group">
                     <label for="masterName">主ユーザーの名前 (空白の場合は「主」):</label>
                     <input type="text" id="masterName" placeholder="主ユーザーの名前を入力 (省略可)">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="partySize">パーティー人数を選択:</label>
                     <select id="partySize" onchange="updateRotationOptions()">
@@ -795,7 +975,8 @@
                             <small style="color: #666; font-size: 12px; display: block; margin-top: 3px;">
                                 <span id="registrationModeDescription">閲覧者からの登録を受け付けません</span>
                             </small>
-                            <div id="approvalStatusIndicator" style="margin-top: 5px; font-size: 12px; font-weight: 600;"></div>
+                            <div id="approvalStatusIndicator"
+                                style="margin-top: 5px; font-size: 12px; font-weight: 600;"></div>
                         </div>
                     </div>
                 </div>
@@ -808,11 +989,48 @@
                     </div>
                 </div>
 
+                <!-- YouTube Live 連携セクション -->
+                <div id="youtubeSection" class="settings-panel">
+                    <h3>📺 YouTube Live 連携</h3>
+                    <div id="youtubeSettingsMount"></div>
+                    <!-- Fallback UI if React component doesn't load -->
+                    <div id="youtubeFallbackUI">
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="youtubeUrl">YouTube Live URL:</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." style="flex: 1;">
+                                <button class="btn" onclick="connectYouTube()" id="youtubeConnectBtn" style="padding: 8px 16px;">接続テスト</button>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="youtubeKeyword">トリガーキーワード:</label>
+                            <input type="text" id="youtubeKeyword" value="!参加" style="max-width: 200px;">
+                            <small style="color: #666; font-size: 12px; display: block; margin-top: 4px;">
+                                視聴者がこのキーワードをコメントすると自動的に参加登録されます
+                            </small>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label>
+                                <input type="checkbox" id="youtubeEnabled" onchange="toggleYouTubeIntegration()" style="margin-right: 8px;">
+                                YouTube Live 連携を有効にする
+                            </label>
+                        </div>
+                        <div id="youtubeStatus" style="padding: 8px 12px; background: #f3f4f6; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
+                            <span id="youtubeStatusDot" style="width: 8px; height: 8px; border-radius: 50%; background: #6b7280;"></span>
+                            <span id="youtubeStatusText" style="font-size: 14px; color: #374151;">未接続</span>
+                            <span id="youtubeProcessedCount" style="margin-left: auto; font-size: 12px; color: #6b7280; display: none;">処理済み: 0 メッセージ</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="controls">
                     <button class="btn" onclick="nextRotation()" id="nextBtn">次へ (交代実行)</button>
-                    <button class="btn" style="background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);" onclick="openOverlayWindow()" id="overlayBtn" title="配信用のオーバーレイを別ウィンドウで開きます">配信用オーバーレイを開く</button>
+                    <button class="btn" style="background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);"
+                        onclick="openOverlayWindow()" id="overlayBtn"
+                        title="配信用のオーバーレイを別ウィンドウで開きます">配信用オーバーレイを開く</button>
                     <button class="btn btn-danger" onclick="resetSession()">セッションリセット</button>
-                    <span id="opStatus" class="op-status hidden"><span class="spinner"></span><span id="opStatusText"></span></span>
+                    <span id="opStatus" class="op-status hidden"><span class="spinner"></span><span
+                            id="opStatusText"></span></span>
                 </div>
 
                 <div class="queue-container">
@@ -839,7 +1057,7 @@
                         <span id="adminUrlToggle" class="toggle-icon collapsed">▶</span>
                     </div>
                     <div id="adminUrlContent" class="admin-url-content collapsed">
-                        <p class="admin-url-warning">⚠️ この管理者URLは秘匿してください。知った人は管理権限を得られます。</p>
+                        <p class="admin-url-warning">この管理者URLは秘匿してください。知った人は管理権限を得られます。</p>
                         <input type="text" id="creatorUrl" readonly>
                         <button class="btn" onclick="copyCreatorUrl()" style="margin-top: 10px;">管理者URLをコピー</button>
                     </div>
@@ -849,12 +1067,13 @@
             <!-- 閲覧専用セクション -->
             <div id="viewSection" class="management-section hidden">
                 <h2>👀 閲覧専用モード</h2>
-                <div id="viewerConnectionBanner" class="viewer-banner hidden"><span class="dot warn"></span><span id="viewerConnectionText">接続中...</span></div>
+                <div id="viewerConnectionBanner" class="viewer-banner hidden"><span class="dot warn"></span><span
+                        id="viewerConnectionText">接続中...</span></div>
                 <p class="hint" id="viewerHint"></p>
-                
+
                 <!-- 自己登録フォーム（承認制の場合） -->
                 <div id="selfRegistrationForm" class="settings-panel" style="display: none;">
-                    <h3>🙋‍♂️ 参加申請</h3>
+                    <h3>参加申請</h3>
                     <div id="registrationStatus" style="margin-bottom: 15px;"></div>
                     <div id="registrationInputArea">
                         <div class="form-group">
@@ -864,7 +1083,7 @@
                         <button class="btn" onclick="submitRegistration()">参加申請を送信</button>
                     </div>
                 </div>
-                
+
                 <div class="stats">
                     <div class="stat-card">
                         <div class="stat-number" id="viewPartyCount">0</div>
@@ -894,7 +1113,8 @@
         </div>
     </div>
     <div id="flagContainer" class="flag-container" role="status" aria-live="polite"></div>
-    <div id="ariaAnnouncements" aria-live="polite" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"></div>
+    <div id="ariaAnnouncements" aria-live="polite"
+        style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;"></div>
 
     <script>
         // Debug logging gate: suppress verbose logs unless explicitly enabled
@@ -904,7 +1124,7 @@
                 const stored = String(localStorage.getItem('debug') || '').toLowerCase();
                 const enabled = qs.has('debug') || stored === '1' || stored === 'true';
                 if (!enabled) {
-                    const noop = () => {};
+                    const noop = () => { };
                     // Keep warn/error for important signals; silence noisy logs by default
                     console.debug = noop;
                     console.log = noop;
@@ -914,9 +1134,9 @@
                 }
                 // Helper to toggle and persist debug mode (reloads to apply early)
                 window.setDebugLogging = (on) => {
-                    try { localStorage.setItem('debug', on ? '1' : '0'); location.reload(); } catch {}
+                    try { localStorage.setItem('debug', on ? '1' : '0'); location.reload(); } catch { }
                 };
-            } catch {}
+            } catch { }
         })();
         // i18n scaffold (ja default)
         const MESSAGES = {
@@ -942,7 +1162,7 @@
         function t(key) { try { return (MESSAGES[CURRENT_LOCALE] && MESSAGES[CURRENT_LOCALE][key]) || key; } catch (_) { return key; } }
         window.setLocale = (loc) => { if (MESSAGES[loc]) CURRENT_LOCALE = loc; };
         // Mount Atlaskit islands if bundle is present
-        (function() {
+        (function () {
             function tryInit() {
                 if (window && window.FormsMount && window.FormsMount.init) {
                     window.FormsMount.init();
@@ -979,7 +1199,7 @@
                 setTimeout(() => {
                     if (el && el.parentNode) el.parentNode.removeChild(el);
                 }, timeoutMs);
-            } catch (_) {}
+            } catch (_) { }
         }
 
         function setBusy(text) {
@@ -996,24 +1216,39 @@
         }
 
         // アプリケーションの状態管理
-            let appState = {
-                sessionCode: null,
-                sessionId: null,
-                partySize: 5,
-                rotationCount: 1,
-                party: [],
-                queue: [],
-                isCreator: false,
-                userIdCounter: 1,
-                approvalRequired: false, // 下位互換性のため保持
-                registrationMode: 'disabled', // 'disabled', 'direct', 'approval'
-                pendingRegistrations: [],
-                userRegistrationStatus: null, // 'pending', 'approved', 'rejected', null
-                userRegistrationName: null, // 申請時の名前を保存
-                isLoadingPendingRegistrations: false, // 重複読み込み防止
-                creatorToken: null, // 管理者用ランダムトークン
-                isRotating: false // 交代処理の多重実行防止
-            };
+        let appState = {
+            sessionCode: null,
+            sessionId: null,
+            partySize: 5,
+            rotationCount: 1,
+            party: [],
+            queue: [],
+            isCreator: false,
+            userIdCounter: 1,
+            approvalRequired: false, // 下位互換性のため保持
+            registrationMode: 'disabled', // 'disabled', 'direct', 'approval'
+            pendingRegistrations: [],
+            userRegistrationStatus: null, // 'pending', 'approved', 'rejected', null
+            userRegistrationName: null, // 申請時の名前を保存
+            isLoadingPendingRegistrations: false, // 重複読み込み防止
+            creatorToken: null, // 管理者用ランダムトークン
+            isRotating: false, // 交代処理の多重実行防止
+            // YouTube Live連携
+            youtube: {
+                enabled: false,
+                videoId: null,
+                videoUrl: '',
+                chatId: null,
+                keyword: '!参加',
+                nextPageToken: null,
+                pollingInterval: null,
+                processedMessageIds: new Set(),
+                processedCount: 0,
+                status: 'disconnected', // 'disconnected', 'connecting', 'connected', 'error'
+                streamTitle: '',
+                errorMessage: ''
+            }
+        };
 
         // Expose interop for DnD island
         window.getAppState = () => appState;
@@ -1026,7 +1261,7 @@
                         updateDisplay();
                         return;
                     }
-                } catch (_) {}
+                } catch (_) { }
                 appState.party = newParty;
                 appState.queue = newQueue;
                 await saveUsersToSupabase();
@@ -1057,7 +1292,7 @@
                 onMove: canMove,
                 onEnd: handleDndEnd
             });
-            console.log('✅ Party sortable initialized');
+            console.log('Party sortable initialized');
         }
 
         // Sortable初期化（キュー）
@@ -1080,7 +1315,7 @@
                 onMove: canMove,
                 onEnd: handleDndEnd
             });
-            console.log('✅ Queue sortable initialized');
+            console.log('Queue sortable initialized');
         }
 
         // DnD 事前制約判定
@@ -1147,9 +1382,9 @@
                         await updateQueueOrderInDatabase();
                     }
                 }
-                console.log('✅ DnD changes persisted');
+                console.log('DnD changes persisted');
             } catch (error) {
-                console.error('❌ Failed to persist DnD changes:', error);
+                console.error('Failed to persist DnD changes:', error);
                 alert('順番の更新に失敗しました。最新の状態に更新します。');
                 // サーバー状態を再読込して整合
                 await loadSessionFromSupabase(appState.sessionCode);
@@ -1167,7 +1402,7 @@
             if (!supabase || !appState.sessionId) {
                 throw new Error('Supabase not initialized or session ID missing');
             }
-            
+
             // パーティーメンバーの順番情報を更新
             const updates = appState.party.map((user, index) => ({
                 session_id: appState.sessionId,
@@ -1177,26 +1412,26 @@
                 order_index: index,
                 is_fixed: user.isFixed || false
             }));
-            
+
             console.log('💾 Updating party order in database:', updates);
-            
+
             // 既存のパーティーメンバーを削除
             const { error: deleteError } = await supabase
                 .from('session_users')
                 .delete()
                 .eq('session_id', appState.sessionId)
                 .eq('position', 'party');
-            
+
             if (deleteError) {
                 throw new Error(`Failed to delete existing party members: ${deleteError.message}`);
             }
-            
+
             // 新しい順番で挿入
             if (updates.length > 0) {
                 const { error: insertError } = await supabase
                     .from('session_users')
                     .insert(updates);
-                
+
                 if (insertError) {
                     throw new Error(`Failed to insert updated party order: ${insertError.message}`);
                 }
@@ -1240,30 +1475,30 @@
             try {
                 console.log('Loading configuration from static file...');
                 console.log('window.APP_CONFIG:', window.APP_CONFIG);
-                
+
                 // 静的ファイルから設定を取得
                 if (!window.APP_CONFIG) {
                     console.error('APP_CONFIG not found. Build script may have failed.');
-                    
+
                     // フォールバック: 手動設定を促すアラート
                     const manualUrl = prompt('環境変数の設定に失敗しました。\nSupabase URLを手動で入力してください:');
                     const manualKey = prompt('Supabase Anon Keyを手動で入力してください:');
-                    
+
                     if (manualUrl && manualKey) {
                         return {
                             supabaseUrl: manualUrl,
                             supabaseKey: manualKey
                         };
                     }
-                    
+
                     throw new Error('APP_CONFIG not found and manual input cancelled.');
                 }
-                
+
                 const config = {
                     supabaseUrl: window.APP_CONFIG.supabaseUrl,
                     supabaseKey: window.APP_CONFIG.supabaseKey
                 };
-                
+
                 console.log('Configuration loaded successfully:', {
                     hasUrl: !!config.supabaseUrl && config.supabaseUrl !== '{{ SUPABASE_URL }}' && config.supabaseUrl !== '',
                     hasKey: !!config.supabaseKey && config.supabaseKey !== '{{ SUPABASE_ANON_KEY }}' && config.supabaseKey !== '',
@@ -1271,21 +1506,21 @@
                     urlLength: config.supabaseUrl ? config.supabaseUrl.length : 0,
                     keyLength: config.supabaseKey ? config.supabaseKey.length : 0
                 });
-                
+
                 // 設定検証（テンプレート文字列が残っていないかチェック）
-                if (!config.supabaseUrl || 
-                    !config.supabaseKey || 
+                if (!config.supabaseUrl ||
+                    !config.supabaseKey ||
                     config.supabaseUrl === '{{ SUPABASE_URL }}' ||
                     config.supabaseKey === '{{ SUPABASE_ANON_KEY }}' ||
                     config.supabaseUrl === '' ||
                     config.supabaseKey === '') {
-                    
-                    console.error('Invalid configuration - environment variables not replaced:', config);
-                    
+
+                    console.error('Missing environment variables! Not replaced: ', config);
+
                     // フォールバック: 手動設定
                     const manualUrl = prompt('環境変数が正しく設定されていません。\nSupabase URLを手動で入力してください:');
                     const manualKey = prompt('Supabase Anon Keyを手動で入力してください:');
-                    
+
                     if (manualUrl && manualKey) {
                         console.log('Using manual configuration');
                         return {
@@ -1293,11 +1528,11 @@
                             supabaseKey: manualKey
                         };
                     }
-                    
+
                     alert('環境変数が正しく設定されていません。\nVercelの環境変数設定とビルドプロセスを確認してください。');
                     return null;
                 }
-                
+
                 return config;
             } catch (error) {
                 console.error('Failed to load config:', error);
@@ -1313,7 +1548,7 @@
                 console.error('Supabase configuration not found');
                 return false;
             }
-            
+
             console.log('Initializing Supabase with URL:', config.supabaseUrl);
             supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey, {
                 realtime: {
@@ -1330,7 +1565,7 @@
                     console.error('Supabase connection test failed:', error);
                     return false;
                 }
-                console.log('✅ Supabase connection test successful');
+                console.log('Supabase connection test successful');
                 return true;
             } catch (error) {
                 console.error('Supabase connection test error:', error);
@@ -1348,7 +1583,7 @@
                 console.warn('skip saveSessionToSupabase: sessionCode not set yet');
                 return false;
             }
-            
+
             try {
                 const masterUser = appState.party.find(user => user.isFixed);
                 const masterName = masterUser ? masterUser.name : '主';
@@ -1362,7 +1597,7 @@
                 if (rc > ps) rc = ps;
                 appState.partySize = ps;
                 appState.rotationCount = rc;
-                
+
                 const sessionData = {
                     session_code: appState.sessionCode,
                     master_name: masterName,
@@ -1382,11 +1617,11 @@
                     .select();
 
                 if (error) {
-                    console.error('❌ Error saving session:', error);
+                    console.error('Error saving session:', error);
                     alert(`セッション保存エラー: ${error.message}`);
                     return false;
                 } else {
-                    console.log('✅ Session saved successfully:', data);
+                    console.log('Session saved successfully:', data);
                     // セッションIDを保存
                     if (data && data.length > 0) {
                         appState.sessionId = data[0].id;
@@ -1395,7 +1630,7 @@
                     return true;
                 }
             } catch (error) {
-                console.error('❌ Exception saving session:', error);
+                console.error('Exception saving session:', error);
                 alert(`セッション保存例外: ${error.message}`);
                 return false;
             }
@@ -1416,7 +1651,7 @@
                 console.log('⏳ saveUsersToSupabase in-flight. Queueing a follow-up save.');
                 saveQueued = true;
                 // 現在の保存が終わるのを待つ
-                try { await currentSavePromise; } catch (_) {}
+                try { await currentSavePromise; } catch (_) { }
                 // 完了後にループして再保存（最新の appState を保存）
             }
 
@@ -1455,7 +1690,7 @@
                         });
 
                         if (error) {
-                            console.error('❌ sync_session_snapshot RPC error:', error);
+                            console.error('sync_session_snapshot RPC error:', error);
                             if (String(error.message || '').includes('invalid token')) {
                                 alert('管理者トークンが無効です。管理者URLからアクセスしてください。');
                             } else if (String(error.message || '').includes('session not found')) {
@@ -1467,11 +1702,11 @@
                             return false;
                         }
 
-                        console.log('✅ sync_session_snapshot completed');
+                        console.log('sync_session_snapshot completed');
                         showFlag(t('saved'), 'success');
                         return true;
                     } catch (error) {
-                        console.error('❌ Exception saving users (RPC):', error);
+                        console.error('Exception saving users (RPC):', error);
                         alert(`ユーザー保存例外: ${error.message}`);
                         showFlag('ユーザー保存エラー', 'error');
                         return false;
@@ -1494,14 +1729,14 @@
         // Supabaseからセッションデータを読み込み
         async function loadSessionFromSupabase(sessionCode) {
             if (!supabase) return false;
-            
+
             try {
                 if (!appState.isCreator) {
                     appState.isLoadingView = true;
                     updateDisplay();
                 }
                 console.log('Loading session from Supabase:', sessionCode);
-                
+
                 const { data: sessionData, error: sessionError } = await supabase
                     .from('sessions')
                     .select('*')
@@ -1539,7 +1774,7 @@
                 appState.creatorToken = sessionData.creator_token;
                 appState.party = [];
                 appState.queue = [];
-                
+
                 // UIの設定値も更新
                 if (appState.isCreator) {
                     setTimeout(() => {
@@ -1550,6 +1785,9 @@
                         if (rotationCountSelect) rotationCountSelect.value = appState.rotationCount;
                         if (approvalCheckbox) approvalCheckbox.checked = appState.approvalRequired;
                     }, 100);
+
+                    // YouTube設定を読み込み
+                    loadYouTubeSettingsFromSupabase(sessionData);
                 }
 
                 if (usersData) {
@@ -1644,9 +1882,9 @@
                     console.log('Realtime subscription status:', status);
                     updateConnectionStatus(status);
                     if (status === 'SUBSCRIBED') {
-                        console.log('✅ Successfully subscribed to realtime updates');
+                        console.log('Successfully subscribed to realtime updates');
                     } else if (status === 'CHANNEL_ERROR') {
-                        console.error('❌ Realtime subscription error');
+                        console.error('Realtime subscription error');
                         // リトライ機能
                         setTimeout(() => {
                             console.log('Retrying realtime subscription...');
@@ -1671,10 +1909,10 @@
         function updateConnectionStatus(status) {
             const statusElement = document.getElementById('connectionStatus');
             const statusTextElement = document.getElementById('connectionStatusText');
-            
+
             if (!appState.isCreator && statusElement && statusTextElement) {
                 statusElement.style.display = 'block';
-                
+
                 switch (status) {
                     case 'SUBSCRIBED':
                         statusTextElement.textContent = '🟢 ' + t('conn_ok');
@@ -1714,8 +1952,8 @@
 
         // セッション開始
         async function startSession() {
-            console.log('🚀 Starting new session...');
-            
+            console.log('Starting new session...');
+
             if (!supabase && !(await initSupabase())) {
                 alert('Supabaseの初期化に失敗しました。');
                 return;
@@ -1723,9 +1961,9 @@
 
             // prefer Atlaskit SetupForm values if available
             let setup = null;
-            try { setup = window.getSetupValues ? window.getSetupValues() : null; } catch(_) {}
+            try { setup = window.getSetupValues ? window.getSetupValues() : null; } catch (_) { }
 
-            let partySize = setup && setup.partySize != null ? parseInt(setup.partySize, 10) : parseInt((document.getElementById('partySize')||{}).value || '');
+            let partySize = setup && setup.partySize != null ? parseInt(setup.partySize, 10) : parseInt((document.getElementById('partySize') || {}).value || '');
             // rotation count is fixed to 1 on setup (no selector in UI)
             let rotationCount = 1;
             if (!Number.isFinite(partySize) || partySize < 2) partySize = 5;
@@ -1734,7 +1972,7 @@
             const masterNameInput = setup && typeof setup.masterName === 'string' ? setup.masterName : document.getElementById('masterName').value.trim();
             const masterName = masterNameInput || '主';
             const approvalRequired = setup && typeof setup.approval === 'boolean' ? setup.approval : document.getElementById('approvalRequired').checked;
-            
+
             appState.partySize = partySize;
             appState.rotationCount = rotationCount;
             appState.sessionCode = generateSessionCode();
@@ -1742,14 +1980,14 @@
             appState.isCreator = true;
             appState.approvalRequired = approvalRequired;
             appState.registrationMode = approvalRequired ? 'approval' : 'disabled';
-            
+
             console.log('Session state:', {
                 sessionCode: appState.sessionCode,
                 partySize: appState.partySize,
                 rotationCount: appState.rotationCount,
                 isCreator: appState.isCreator
             });
-            
+
             // 入力された名前（または「主」）でユーザーを固定作成
             const masterUser = {
                 id: 0,
@@ -1758,27 +1996,27 @@
                 isFixed: true
             };
             appState.party.push(masterUser);
-            
+
             // Supabaseに保存
             console.log('💾 Saving to Supabase...');
             const sessionSaved = await saveSessionToSupabase();
             const usersSaved = await saveUsersToSupabase();
-            
+
             if (!sessionSaved || !usersSaved) {
-                console.error('❌ Failed to save to Supabase');
+                console.error('Failed to save to Supabase');
                 alert('データの保存に失敗しました。コンソールでエラーを確認してください。');
                 return;
             }
-            
-            console.log('✅ Data saved successfully');
-            
+
+            console.log('Data saved successfully');
+
             // URLを更新
             updateUrl();
             updateUrlDisplay();
-            
+
             showManagementSection();
             updateDisplay();
-            
+
             // 初期化後にSortableをセットアップ
             setTimeout(() => {
                 if (appState.isCreator) {
@@ -1813,9 +2051,9 @@
             const baseUrl = window.location.origin + window.location.pathname;
             const viewUrl = `${baseUrl}?session=${appState.sessionCode}`;
             const creatorUrl = `${baseUrl}?session=${appState.sessionCode}&creator=${appState.creatorToken}`;
-            
+
             document.getElementById('shareUrl').value = viewUrl;
-            
+
             if (appState.isCreator && appState.creatorToken) {
                 const creatorUrlElement = document.getElementById('creatorUrl');
                 if (creatorUrlElement) {
@@ -1829,28 +2067,39 @@
             document.getElementById('setupSection').classList.add('hidden');
             document.getElementById('managementSection').classList.remove('hidden');
             document.getElementById('sessionInfo').classList.remove('hidden');
-            
+
             document.getElementById('sessionCode').textContent = appState.sessionCode;
             document.getElementById('creatorStatus').textContent = appState.isCreator ? '管理者' : '閲覧者';
-            
+
             // 現在の設定値をセレクトボックスに反映
             document.getElementById('currentPartySize').value = appState.partySize;
             document.getElementById('currentRotationCount').value = appState.rotationCount;
             document.getElementById('currentRegistrationMode').value = appState.registrationMode;
-            
+
             // 登録モードの説明文とステータスを初期化
             updateRegistrationModeDisplay();
 
             // 交代人数の選択肢を現在のパーティー人数/固定数から更新
-            try { updateRotationOptionsForManagement(); } catch(_) {}
-            
+            try { updateRotationOptionsForManagement(); } catch (_) { }
+
             updateUrlDisplay();
 
             try {
                 if (window && window.FormsMount && window.FormsMount.mountManagement) {
                     window.FormsMount.mountManagement();
                 }
-            } catch (_) {}
+            } catch (_) { }
+
+            // YouTube連携UIを初期化
+            updateYouTubeSectionVisibility();
+            try {
+                if (window && window.FormsMount && window.FormsMount.mountYouTube) {
+                    window.FormsMount.mountYouTube();
+                    // ReactコンポーネントがマウントされたらフォールバックUIを非表示
+                    const fallback = document.getElementById('youtubeFallbackUI');
+                    if (fallback) fallback.style.display = 'none';
+                }
+            } catch (_) { }
         }
 
         // 閲覧専用セクションを表示
@@ -1858,7 +2107,7 @@
             document.getElementById('setupSection').classList.add('hidden');
             document.getElementById('viewSection').classList.remove('hidden');
             document.getElementById('sessionInfo').classList.remove('hidden');
-            
+
             document.getElementById('sessionCode').textContent = appState.sessionCode;
             document.getElementById('creatorStatus').textContent = '閲覧者';
         }
@@ -1872,40 +2121,40 @@
         async function addUser() {
             const nameInput = document.getElementById('newUserName');
             const name = nameInput.value.trim();
-            
+
             if (!name) {
                 alert('ユーザー名を入力してください');
                 return;
             }
-            
+
             // 重複チェック
             if (isUserNameDuplicate(name)) {
                 alert('その名前のユーザーは既に参加しています');
                 return;
             }
-            
+
             const user = {
                 id: appState.userIdCounter++,
                 name: name,
                 joinedAt: new Date()
             };
-            
+
             if (appState.party.length < appState.partySize) {
                 appState.party.push(user);
             } else {
                 appState.queue.push(user);
             }
-            
+
             console.log('👤 Adding user:', user);
-            
+
             // Supabaseに保存
             const saved = await saveUsersToSupabase();
             if (!saved) {
-                console.error('❌ Failed to save user');
+                console.error('Failed to save user');
                 alert('ユーザーの保存に失敗しました。');
                 return;
             }
-            
+
             nameInput.value = '';
             updateDisplay();
         }
@@ -1920,12 +2169,12 @@
             appState.isRotating = true;
             const nextBtn = document.getElementById('nextBtn');
             if (nextBtn) nextBtn.disabled = true;
-            
+
             try {
                 // 直前の保存が進行中であれば完了を待つ（交代と保存の直列化）
                 if (typeof currentSavePromise !== 'undefined' && currentSavePromise) {
                     console.log('⏳ Waiting for in-flight save before rotation...');
-                    try { await currentSavePromise; } catch (_) {}
+                    try { await currentSavePromise; } catch (_) { }
                 }
                 if (!supabase || !appState.sessionCode || !appState.creatorToken) {
                     alert('セッション情報が不足しています');
@@ -1937,7 +2186,7 @@
                     p_creator_token: appState.creatorToken
                 });
                 if (error) {
-                    console.error('❌ rotate_session RPC error:', error);
+                    console.error('rotate_session RPC error:', error);
                     if (String(error.message || '').includes('invalid token')) {
                         alert('管理者トークンが無効です。管理者URLからアクセスしてください。');
                     } else if (String(error.message || '').includes('session not found')) {
@@ -1948,7 +2197,7 @@
                     showFlag(t('rotate_failed'), 'error');
                     return;
                 }
-                console.log('✅ rotate_session result:', data);
+                console.log('rotate_session result:', data);
                 // DBの状態を再読込
                 await loadSessionFromSupabase(appState.sessionCode);
                 updateDisplay();
@@ -2141,9 +2390,9 @@ ${'</scr' + 'ipt>'}
                 alert(`「${masterName}」は削除できません`);
                 return;
             }
-            
-            console.log('🗑️ Removing user:', { id, fromParty });
-            
+
+            console.log('Removing user:', { id, fromParty });
+
             if (fromParty) {
                 appState.party = appState.party.filter(user => user.id !== id);
                 const replacements = appState.queue.splice(0, appState.partySize - appState.party.length);
@@ -2151,15 +2400,15 @@ ${'</scr' + 'ipt>'}
             } else {
                 appState.queue = appState.queue.filter(user => user.id !== id);
             }
-            
+
             // Supabaseに保存
             const saved = await saveUsersToSupabase();
             if (!saved) {
-                console.error('❌ Failed to save user removal');
+                console.error('Failed to save user removal');
                 alert('ユーザー削除の保存に失敗しました。');
                 return;
             }
-            
+
             updateDisplay();
         }
 
@@ -2178,13 +2427,13 @@ ${'</scr' + 'ipt>'}
             document.getElementById('partyCount').textContent = appState.party.length;
             document.getElementById('queueCount').textContent = appState.queue.length;
             document.getElementById('totalCount').textContent = appState.party.length + appState.queue.length;
-            
+
             // 固定ユーザ数の表示を更新
             updateFixedUserCount();
 
             // 次回ローテーションのハイライト対象を計算
             const { nextJoiningIds, nextLeavingIds } = computeRotationPreview();
-            
+
             const partyList = document.getElementById('partyList');
             partyList.innerHTML = '';
             appState.party.forEach((user, index) => {
@@ -2193,7 +2442,7 @@ ${'</scr' + 'ipt>'}
                 userDiv.setAttribute('data-user-id', user.id);
                 userDiv.setAttribute('role', 'listitem');
                 userDiv.setAttribute('tabindex', '0');
-                
+
                 if (user.isFixed) {
                     userDiv.style.background = 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)';
                     userDiv.style.border = '2px solid #ffd700';
@@ -2204,7 +2453,7 @@ ${'</scr' + 'ipt>'}
                     userDiv.classList.add('highlight-next-out');
                     userDiv.title = '次に退出（交代）します';
                 }
-                
+
                 userDiv.innerHTML = `
                     <div>
                         <span class="user-name">${user.name}${user.isFixed ? ' 👑' : ''}</span>
@@ -2213,16 +2462,16 @@ ${'</scr' + 'ipt>'}
                         ${nextLeavingIds.has(user.id) ? '<span class="lozenge loz-out" style="margin-left:8px;">次に退出</span>' : ''}
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        ${user.id === 0 ? 
-                            '<span class="hint">主（固定）</span>' : 
-                            `<button class="btn ${user.isFixed ? 'btn-warning' : ''}" onclick="toggleUserFixed(${user.id})" aria-label="${user.isFixed ? '固定解除' : '固定'}" title="${user.isFixed ? '固定解除' : '固定'}" style="font-size: 0.8em; padding: 6px 12px;">${user.isFixed ? '固定解除' : '固定'}</button>
+                        ${user.id === 0 ?
+                        '<span class="hint">主（固定）</span>' :
+                        `<button class="btn ${user.isFixed ? 'btn-warning' : ''}" onclick="toggleUserFixed(${user.id})" aria-label="${user.isFixed ? '固定解除' : '固定'}" title="${user.isFixed ? '固定解除' : '固定'}" style="font-size: 0.8em; padding: 6px 12px;">${user.isFixed ? '固定解除' : '固定'}</button>
                             ${!user.isFixed ? `<button class=\"btn btn-danger\" onclick=\"removeUser(${user.id}, true)\" aria-label=\"削除\" title=\"削除\" style=\"font-size: 0.8em; padding: 6px 12px;\">削除</button>` : ''}`
-                        }
+                    }
                     </div>
                 `;
                 partyList.appendChild(userDiv);
             });
-            
+
             const queueList = document.getElementById('queueList');
             queueList.innerHTML = '';
             appState.queue.forEach((user, index) => {
@@ -2231,7 +2480,7 @@ ${'</scr' + 'ipt>'}
                 userDiv.setAttribute('data-user-id', user.id);
                 userDiv.setAttribute('role', 'listitem');
                 userDiv.setAttribute('tabindex', '0');
-                
+
                 // 次に入る対象をハイライト
                 if (nextJoiningIds.has(user.id)) {
                     userDiv.classList.add('highlight-next-in');
@@ -2247,17 +2496,17 @@ ${'</scr' + 'ipt>'}
                 `;
                 queueList.appendChild(userDiv);
             });
-            
+
             const nextBtn = document.getElementById('nextBtn');
             const rotatableUsers = appState.party.filter(user => !user.isFixed);
             nextBtn.disabled = rotatableUsers.length === 0;
-            
+
             // リストの描画後にSortableを初期化
             setTimeout(() => {
                 initializePartySortable();
                 initializeQueueSortable();
                 initializeKeyboardReorder();
-                try { if (window.refreshDnd) window.refreshDnd(); } catch(_){}
+                try { if (window.refreshDnd) window.refreshDnd(); } catch (_) { }
             }, 0);
         }
 
@@ -2279,14 +2528,14 @@ ${'</scr' + 'ipt>'}
                 document.getElementById('viewQueueCount').textContent = appState.queue.length;
                 document.getElementById('viewTotalCount').textContent = appState.party.length + appState.queue.length;
             }
-            
+
             // 次回ローテーションのハイライト対象を計算
             const { nextJoiningIds, nextLeavingIds } = computeRotationPreview();
 
             const partyList = document.getElementById('viewPartyList');
             partyList.innerHTML = '';
             if (appState.isLoadingView) {
-                for (let i=0; i<3; i++) {
+                for (let i = 0; i < 3; i++) {
                     const sk = document.createElement('div');
                     sk.className = 'skeleton sk-card';
                     partyList.appendChild(sk);
@@ -2297,17 +2546,17 @@ ${'</scr' + 'ipt>'}
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
                 userDiv.setAttribute('role', 'listitem');
-                
+
                 if (user.isFixed) {
                     userDiv.style.background = 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)';
                     userDiv.style.border = '2px solid #ffd700';
                 }
-                
+
                 if (nextLeavingIds.has(user.id)) {
                     userDiv.classList.add('highlight-next-out');
                     userDiv.title = '次に退出（交代）します';
                 }
-                
+
                 userDiv.innerHTML = `
                     <div>
                         <span class="user-name">${user.name}${user.isFixed ? ' 👑' : ''}</span>
@@ -2318,11 +2567,11 @@ ${'</scr' + 'ipt>'}
                 `;
                 partyList.appendChild(userDiv);
             });
-            
+
             const queueList = document.getElementById('viewQueueList');
             queueList.innerHTML = '';
             if (appState.isLoadingView) {
-                for (let i=0; i<3; i++) {
+                for (let i = 0; i < 3; i++) {
                     const sk = document.createElement('div');
                     sk.className = 'skeleton sk-card';
                     queueList.appendChild(sk);
@@ -2476,7 +2725,7 @@ ${'</scr' + 'ipt>'}
         function toggleAdminUrl() {
             const content = document.getElementById('adminUrlContent');
             const toggle = document.getElementById('adminUrlToggle');
-            
+
             if (content.classList.contains('collapsed')) {
                 // 展開
                 content.classList.remove('collapsed');
@@ -2496,7 +2745,7 @@ ${'</scr' + 'ipt>'}
         function toggleSessionInfo() {
             const content = document.getElementById('sessionInfoContent');
             const toggle = document.getElementById('sessionInfoToggle');
-            
+
             if (content.classList.contains('collapsed')) {
                 // 展開
                 content.classList.remove('collapsed');
@@ -2516,29 +2765,29 @@ ${'</scr' + 'ipt>'}
         async function updatePartySize() {
             const newSize = parseInt(document.getElementById('currentPartySize').value);
             const oldSize = appState.partySize;
-            
+
             console.log(`🔧 Changing party size from ${oldSize} to ${newSize}`);
-            
+
             // 固定ユーザ数の制限チェック
             const currentFixedCount = appState.party.filter(user => user.isFixed).length;
             const newMaxFixed = newSize - 1;
-            
+
             if (currentFixedCount > newMaxFixed) {
                 alert(`パーティーサイズ${newSize}人では固定ユーザーは最大${newMaxFixed}人までです。\n現在の固定ユーザー数: ${currentFixedCount}人\n\n先に固定ユーザーを解除してください。`);
                 // セレクトボックスを元の値に戻す
                 document.getElementById('currentPartySize').value = oldSize;
                 return;
             }
-            
+
             appState.partySize = newSize;
-            
+
             // パーティーサイズが小さくなった場合、余剰メンバーをキューに移動
             if (newSize < oldSize && appState.party.length > newSize) {
                 const excess = appState.party.splice(newSize);
                 // 固定ユーザーは除外
                 const movableUsers = excess.filter(user => !user.isFixed);
                 const fixedUsers = excess.filter(user => user.isFixed);
-                
+
                 // 固定ユーザーはパーティーに戻す（強制的に入れる）
                 appState.party.push(...fixedUsers);
                 // 可動ユーザーはキューの先頭に追加
@@ -2552,14 +2801,14 @@ ${'</scr' + 'ipt>'}
                     appState.party.push(...newMembers);
                 }
             }
-            
+
             // Supabaseに保存
             await saveSessionToSupabase();
             await saveUsersToSupabase();
-            
+
             // パーティー人数が変更されたので交代人数選択肢を更新
             updateRotationOptionsForManagement();
-            
+
             updateDisplay();
         }
 
@@ -2567,12 +2816,12 @@ ${'</scr' + 'ipt>'}
         async function updateRotationCount() {
             const newCount = parseInt(document.getElementById('currentRotationCount').value);
             console.log(`🔧 Changing rotation count to ${newCount}`);
-            
+
             appState.rotationCount = newCount;
-            
+
             // Supabaseに保存
             await saveSessionToSupabase();
-            
+
             updateDisplay();
         }
 
@@ -2580,7 +2829,7 @@ ${'</scr' + 'ipt>'}
         function validateFixedUserCount(isAdding = false) {
             const maxFixed = appState.partySize - 1;
             const currentFixed = appState.party.filter(user => user.isFixed).length;
-            
+
             if (isAdding) {
                 return currentFixed < maxFixed;
             } else {
@@ -2592,7 +2841,7 @@ ${'</scr' + 'ipt>'}
         function updateFixedUserCount() {
             const maxFixed = appState.partySize - 1;
             const currentFixed = appState.party.filter(user => user.isFixed).length;
-            
+
             // 固定ユーザ数の表示を追加（設定パネル内に表示）
             let fixedCountDisplay = document.getElementById('fixedCountDisplay');
             if (!fixedCountDisplay) {
@@ -2608,7 +2857,7 @@ ${'</scr' + 'ipt>'}
                     fixedCountDisplay = document.getElementById('fixedCountDisplay');
                 }
             }
-            
+
             if (fixedCountDisplay) {
                 fixedCountDisplay.textContent = `${currentFixed} / ${maxFixed}人`;
                 if (currentFixed >= maxFixed) {
@@ -2625,25 +2874,25 @@ ${'</scr' + 'ipt>'}
                 alert('主ユーザーの固定状態は変更できません');
                 return;
             }
-            
+
             const user = appState.party.find(u => u.id === userId);
             if (!user) {
                 alert('ユーザーが見つかりません');
                 return;
             }
-            
+
             // 固定にする場合の制限チェック
             if (!user.isFixed && !validateFixedUserCount(true)) {
                 const maxFixed = appState.partySize - 1;
                 alert(`固定ユーザーは最大${maxFixed}人までです`);
                 return;
             }
-            
+
             // 固定状態を切り替え
             user.isFixed = !user.isFixed;
-            
+
             console.log(`🔧 User ${user.name} fixed status changed to: ${user.isFixed}`);
-            
+
             // Supabaseに保存
             const saved = await saveUsersToSupabase();
             if (!saved) {
@@ -2652,10 +2901,10 @@ ${'</scr' + 'ipt>'}
                 alert('固定状態の変更に失敗しました');
                 return;
             }
-            
+
             // 固定ユーザー数が変更されたので交代人数選択肢を更新
             updateRotationOptionsForManagement();
-            
+
             updateDisplay();
         }
 
@@ -2666,31 +2915,517 @@ ${'</scr' + 'ipt>'}
                 appState.party = masterUser ? [masterUser] : [];
                 appState.queue = [];
                 appState.userIdCounter = 1;
-                
+
+                // YouTube連携を停止
+                stopYouTubeIntegration();
+
                 // Supabaseに保存
                 await saveUsersToSupabase();
-                
+
                 updateDisplay();
             }
         }
 
+        // =====================================================
+        // YouTube Live 連携機能
+        // =====================================================
+
+        // YouTube動画IDを抽出
+        function extractYouTubeVideoId(url) {
+            if (!url) return null;
+            try {
+                const urlObj = new URL(url);
+                if (urlObj.hostname === 'youtu.be') {
+                    return urlObj.pathname.slice(1).split('?')[0] || null;
+                }
+                if (urlObj.hostname.includes('youtube.com')) {
+                    const vParam = urlObj.searchParams.get('v');
+                    if (vParam) return vParam;
+                    const liveMatch = urlObj.pathname.match(/\/live\/([^/?]+)/);
+                    if (liveMatch) return liveMatch[1];
+                    const embedMatch = urlObj.pathname.match(/\/embed\/([^/?]+)/);
+                    if (embedMatch) return embedMatch[1];
+                }
+                return null;
+            } catch {
+                const patterns = [
+                    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/live\/)([^&?\s]+)/,
+                    /^([a-zA-Z0-9_-]{11})$/
+                ];
+                for (const pattern of patterns) {
+                    const match = url.match(pattern);
+                    if (match) return match[1];
+                }
+                return null;
+            }
+        }
+
+        // YouTube APIキーが設定されているかチェック
+        function hasYouTubeApiKey() {
+            return !!(window.APP_CONFIG && window.APP_CONFIG.youtubeApiKey);
+        }
+
+        // YouTube接続状態を更新
+        function updateYouTubeStatus(status, message = '', streamTitle = '') {
+            appState.youtube.status = status;
+            appState.youtube.errorMessage = message;
+            appState.youtube.streamTitle = streamTitle;
+
+            const statusDot = document.getElementById('youtubeStatusDot');
+            const statusText = document.getElementById('youtubeStatusText');
+            const processedCount = document.getElementById('youtubeProcessedCount');
+
+            if (statusDot && statusText) {
+                let color = '#6b7280';
+                let text = '未接続';
+
+                switch (status) {
+                    case 'connected':
+                        color = '#22c55e';
+                        text = `接続中: ${streamTitle || '配信'}`;
+                        break;
+                    case 'connecting':
+                        color = '#f59e0b';
+                        text = '接続中...';
+                        break;
+                    case 'error':
+                        color = '#ef4444';
+                        text = `エラー: ${message}`;
+                        break;
+                    default:
+                        color = '#6b7280';
+                        text = '未接続';
+                }
+
+                statusDot.style.background = color;
+                statusText.textContent = text;
+            }
+
+            if (processedCount) {
+                if (status === 'connected') {
+                    processedCount.style.display = 'inline';
+                    processedCount.textContent = `処理済み: ${appState.youtube.processedCount} メッセージ`;
+                } else {
+                    processedCount.style.display = 'none';
+                }
+            }
+
+            // React componentへの更新通知
+            try {
+                if (window.refreshYouTubeSettings) window.refreshYouTubeSettings();
+            } catch (_) {}
+        }
+
+        // YouTube Live配信情報を取得
+        async function fetchYouTubeVideoInfo(videoId) {
+            const apiKey = window.APP_CONFIG?.youtubeApiKey;
+            if (!apiKey) throw new Error('YouTube API キーが設定されていません');
+
+            const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails&id=${videoId}&key=${apiKey}`;
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.error?.message || `YouTube API エラー: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (!data.items || data.items.length === 0) {
+                throw new Error('動画が見つかりませんでした');
+            }
+
+            const video = data.items[0];
+            const liveDetails = video.liveStreamingDetails;
+
+            return {
+                title: video.snippet?.title || 'Unknown',
+                liveChatId: liveDetails?.activeLiveChatId || null,
+                isLive: !!liveDetails?.activeLiveChatId
+            };
+        }
+
+        // YouTube Liveチャットメッセージを取得
+        async function fetchYouTubeChatMessages(chatId, pageToken = null) {
+            const apiKey = window.APP_CONFIG?.youtubeApiKey;
+            if (!apiKey) throw new Error('YouTube API キーが設定されていません');
+
+            let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${chatId}&part=snippet,authorDetails&key=${apiKey}`;
+            if (pageToken) url += `&pageToken=${pageToken}`;
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                if (response.status === 403) {
+                    if (error.error?.errors?.[0]?.reason === 'liveChatEnded') {
+                        throw new Error('ライブ配信が終了しました');
+                    }
+                    throw new Error('APIクォータを超過しました');
+                }
+                throw new Error(error.error?.message || `YouTube API エラー: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const messages = (data.items || []).map(item => ({
+                id: item.id,
+                authorDisplayName: item.authorDetails?.displayName || 'Unknown',
+                authorChannelId: item.authorDetails?.channelId || '',
+                messageText: item.snippet?.displayMessage || '',
+                publishedAt: item.snippet?.publishedAt || ''
+            }));
+
+            return {
+                nextPageToken: data.nextPageToken || null,
+                pollingIntervalMillis: data.pollingIntervalMillis || 5000,
+                messages
+            };
+        }
+
+        // メッセージがキーワードを含むかチェック
+        function messageContainsKeyword(message, keyword) {
+            if (!message || !keyword) return false;
+            const normalizedMessage = message.trim().toLowerCase();
+            const normalizedKeyword = keyword.trim().toLowerCase();
+            return normalizedMessage === normalizedKeyword ||
+                   normalizedMessage.startsWith(normalizedKeyword + ' ') ||
+                   normalizedMessage.startsWith(normalizedKeyword + '　');
+        }
+
+        // ユーザー名をサニタイズ
+        function sanitizeYouTubeUsername(name) {
+            if (!name) return '';
+            return name.trim().replace(/[<>'"&\\]/g, '').slice(0, 50);
+        }
+
+        // YouTube接続テスト
+        async function connectYouTube(url, keyword) {
+            const videoUrl = url || document.getElementById('youtubeUrl')?.value;
+            const triggerKeyword = keyword || document.getElementById('youtubeKeyword')?.value || '!参加';
+
+            if (!videoUrl) {
+                showFlag('YouTube URLを入力してください', 'error');
+                return false;
+            }
+
+            if (!hasYouTubeApiKey()) {
+                showFlag('YouTube API キーが設定されていません', 'error');
+                updateYouTubeStatus('error', 'APIキー未設定');
+                return false;
+            }
+
+            const videoId = extractYouTubeVideoId(videoUrl);
+            if (!videoId) {
+                showFlag('無効なYouTube URLです', 'error');
+                updateYouTubeStatus('error', '無効なURL');
+                return false;
+            }
+
+            updateYouTubeStatus('connecting');
+
+            try {
+                const videoInfo = await fetchYouTubeVideoInfo(videoId);
+
+                if (!videoInfo.isLive || !videoInfo.liveChatId) {
+                    showFlag('この動画はライブ配信中ではありません', 'error');
+                    updateYouTubeStatus('error', 'ライブ配信ではありません');
+                    return false;
+                }
+
+                appState.youtube.videoId = videoId;
+                appState.youtube.videoUrl = videoUrl;
+                appState.youtube.chatId = videoInfo.liveChatId;
+                appState.youtube.keyword = triggerKeyword;
+                appState.youtube.streamTitle = videoInfo.title;
+
+                updateYouTubeStatus('connected', '', videoInfo.title);
+                showFlag(`「${videoInfo.title}」に接続しました`, 'success');
+
+                return true;
+            } catch (error) {
+                console.error('YouTube接続エラー:', error);
+                showFlag(error.message || 'YouTube接続に失敗しました', 'error');
+                updateYouTubeStatus('error', error.message);
+                return false;
+            }
+        }
+
+        // YouTube連携を有効化/無効化
+        async function toggleYouTubeIntegration() {
+            const checkbox = document.getElementById('youtubeEnabled');
+            const enabled = checkbox?.checked;
+
+            if (enabled) {
+                await startYouTubeIntegration();
+            } else {
+                stopYouTubeIntegration();
+            }
+        }
+
+        // YouTube連携を開始
+        async function startYouTubeIntegration(url, keyword) {
+            // まず接続テストを実行
+            if (!appState.youtube.chatId) {
+                const connected = await connectYouTube(url, keyword);
+                if (!connected) {
+                    const checkbox = document.getElementById('youtubeEnabled');
+                    if (checkbox) checkbox.checked = false;
+                    return;
+                }
+            }
+
+            appState.youtube.enabled = true;
+            appState.youtube.processedMessageIds = new Set();
+            appState.youtube.processedCount = 0;
+
+            // 初回のメッセージ取得（次回以降のページトークンを取得）
+            try {
+                const result = await fetchYouTubeChatMessages(appState.youtube.chatId);
+                appState.youtube.nextPageToken = result.nextPageToken;
+
+                // 既存のメッセージIDを記録（重複処理を防ぐ）
+                result.messages.forEach(msg => {
+                    appState.youtube.processedMessageIds.add(msg.id);
+                });
+
+                // ポーリング開始
+                const interval = Math.max(result.pollingIntervalMillis, 5000);
+                appState.youtube.pollingInterval = setInterval(pollYouTubeChat, interval);
+
+                console.log(`YouTube Live ポーリング開始 (間隔: ${interval}ms)`);
+                showFlag('YouTube Live 連携を開始しました', 'success');
+                updateYouTubeStatus('connected', '', appState.youtube.streamTitle);
+
+                // DB保存
+                await saveYouTubeSettingsToSupabase();
+            } catch (error) {
+                console.error('YouTube連携開始エラー:', error);
+                showFlag(error.message || 'YouTube連携の開始に失敗しました', 'error');
+                updateYouTubeStatus('error', error.message);
+                appState.youtube.enabled = false;
+                const checkbox = document.getElementById('youtubeEnabled');
+                if (checkbox) checkbox.checked = false;
+            }
+        }
+
+        // YouTube連携を停止
+        function stopYouTubeIntegration() {
+            if (appState.youtube.pollingInterval) {
+                clearInterval(appState.youtube.pollingInterval);
+                appState.youtube.pollingInterval = null;
+            }
+
+            appState.youtube.enabled = false;
+            updateYouTubeStatus('disconnected');
+
+            const checkbox = document.getElementById('youtubeEnabled');
+            if (checkbox) checkbox.checked = false;
+
+            console.log('YouTube Live 連携を停止しました');
+        }
+
+        // YouTube Liveチャットをポーリング
+        async function pollYouTubeChat() {
+            if (!appState.youtube.enabled || !appState.youtube.chatId) return;
+
+            try {
+                const result = await fetchYouTubeChatMessages(
+                    appState.youtube.chatId,
+                    appState.youtube.nextPageToken
+                );
+
+                appState.youtube.nextPageToken = result.nextPageToken;
+
+                // 新着メッセージを処理
+                for (const msg of result.messages) {
+                    if (appState.youtube.processedMessageIds.has(msg.id)) continue;
+                    appState.youtube.processedMessageIds.add(msg.id);
+
+                    // キーワードチェック
+                    if (messageContainsKeyword(msg.messageText, appState.youtube.keyword)) {
+                        await handleYouTubeJoinRequest(msg.authorDisplayName, msg.authorChannelId);
+                    }
+                }
+
+                // 処理済みメッセージ数を更新
+                appState.youtube.processedCount = appState.youtube.processedMessageIds.size;
+                updateYouTubeStatus('connected', '', appState.youtube.streamTitle);
+
+            } catch (error) {
+                console.error('YouTube チャットポーリングエラー:', error);
+
+                if (error.message.includes('ライブ配信が終了') || error.message.includes('liveChatEnded')) {
+                    showFlag('ライブ配信が終了しました', 'warning');
+                    stopYouTubeIntegration();
+                } else if (error.message.includes('クォータ')) {
+                    showFlag('APIクォータを超過しました。しばらく待ってください。', 'error');
+                    // 一時的に間隔を延長
+                    if (appState.youtube.pollingInterval) {
+                        clearInterval(appState.youtube.pollingInterval);
+                        appState.youtube.pollingInterval = setInterval(pollYouTubeChat, 30000);
+                    }
+                }
+            }
+        }
+
+        // YouTubeからの参加リクエストを処理
+        async function handleYouTubeJoinRequest(displayName, channelId) {
+            const sanitizedName = sanitizeYouTubeUsername(displayName);
+            if (!sanitizedName) return;
+
+            // 重複チェック
+            if (isUserNameDuplicate(sanitizedName)) {
+                console.log(`YouTube参加リクエスト: ${sanitizedName} (重複のためスキップ)`);
+                return;
+            }
+
+            console.log(`YouTube参加リクエスト: ${sanitizedName}`);
+
+            // 登録モードに応じて処理
+            if (appState.registrationMode === 'direct') {
+                // 直接追加
+                const user = {
+                    id: appState.userIdCounter++,
+                    name: sanitizedName,
+                    joinedAt: new Date(),
+                    youtubeChannelId: channelId
+                };
+
+                if (appState.party.length < appState.partySize) {
+                    appState.party.push(user);
+                } else {
+                    appState.queue.push(user);
+                }
+
+                await saveUsersToSupabase();
+                updateDisplay();
+                showFlag(`${sanitizedName} さんが参加しました (YouTube)`, 'success');
+
+            } else if (appState.registrationMode === 'approval') {
+                // 承認待ちに追加
+                try {
+                    const { error } = await supabase
+                        .from('pending_registrations')
+                        .insert({
+                            session_id: appState.sessionId,
+                            name: sanitizedName,
+                            status: 'pending',
+                            requested_at: new Date().toISOString()
+                        });
+
+                    if (error) {
+                        console.error('承認待ち登録エラー:', error);
+                    } else {
+                        showFlag(`${sanitizedName} さんの参加申請を受け付けました`, 'info');
+                        await loadPendingRegistrations();
+                        updatePendingRegistrationsDisplay();
+                    }
+                } catch (error) {
+                    console.error('承認待ち登録エラー:', error);
+                }
+            }
+            // registrationMode === 'disabled' の場合は何もしない
+        }
+
+        // YouTube設定をSupabaseに保存
+        async function saveYouTubeSettingsToSupabase() {
+            if (!supabase || !appState.sessionId) return;
+
+            try {
+                const { error } = await supabase
+                    .from('sessions')
+                    .update({
+                        youtube_video_id: appState.youtube.videoId,
+                        youtube_chat_id: appState.youtube.chatId,
+                        youtube_keyword: appState.youtube.keyword,
+                        youtube_enabled: appState.youtube.enabled,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', appState.sessionId);
+
+                if (error) {
+                    console.error('YouTube設定保存エラー:', error);
+                }
+            } catch (error) {
+                console.error('YouTube設定保存エラー:', error);
+            }
+        }
+
+        // YouTube設定をSupabaseから読み込み
+        async function loadYouTubeSettingsFromSupabase(sessionData) {
+            if (!sessionData) return;
+
+            appState.youtube.videoId = sessionData.youtube_video_id || null;
+            appState.youtube.chatId = sessionData.youtube_chat_id || null;
+            appState.youtube.keyword = sessionData.youtube_keyword || '!参加';
+            appState.youtube.enabled = sessionData.youtube_enabled || false;
+
+            // UI更新
+            const urlInput = document.getElementById('youtubeUrl');
+            const keywordInput = document.getElementById('youtubeKeyword');
+            const enabledCheckbox = document.getElementById('youtubeEnabled');
+
+            if (urlInput && appState.youtube.videoId) {
+                urlInput.value = `https://www.youtube.com/watch?v=${appState.youtube.videoId}`;
+                appState.youtube.videoUrl = urlInput.value;
+            }
+            if (keywordInput) keywordInput.value = appState.youtube.keyword;
+            if (enabledCheckbox) enabledCheckbox.checked = appState.youtube.enabled;
+
+            // 有効な場合は自動的に再接続
+            if (appState.youtube.enabled && appState.youtube.chatId) {
+                try {
+                    const videoInfo = await fetchYouTubeVideoInfo(appState.youtube.videoId);
+                    if (videoInfo.isLive && videoInfo.liveChatId) {
+                        appState.youtube.streamTitle = videoInfo.title;
+                        await startYouTubeIntegration();
+                    } else {
+                        appState.youtube.enabled = false;
+                        updateYouTubeStatus('disconnected');
+                    }
+                } catch (error) {
+                    console.warn('YouTube再接続失敗:', error);
+                    appState.youtube.enabled = false;
+                    updateYouTubeStatus('error', error.message);
+                }
+            }
+        }
+
+        // YouTube設定セクションの表示/非表示
+        function updateYouTubeSectionVisibility() {
+            const section = document.getElementById('youtubeSection');
+            if (!section) return;
+
+            // APIキーがない場合は非表示
+            if (!hasYouTubeApiKey()) {
+                section.style.display = 'none';
+                return;
+            }
+
+            // 管理者のみ表示
+            section.style.display = appState.isCreator ? 'block' : 'none';
+        }
+
+        // =====================================================
+        // YouTube Live 連携機能 終了
+        // =====================================================
+
         // Enterキーでユーザー追加とセッション開始
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // セットアップ画面の交代人数選択肢を初期化
             updateRotationOptions('rotationCount');
-            
+
             const newUserInput = document.getElementById('newUserName');
             if (newUserInput) {
-                newUserInput.addEventListener('keypress', function(e) {
+                newUserInput.addEventListener('keypress', function (e) {
                     if (e.key === 'Enter') {
                         addUser();
                     }
                 });
             }
-            
+
             const masterNameInput = document.getElementById('masterName');
             if (masterNameInput) {
-                masterNameInput.addEventListener('keypress', function(e) {
+                masterNameInput.addEventListener('keypress', function (e) {
                     if (e.key === 'Enter') {
                         startSession();
                     }
@@ -2704,7 +3439,7 @@ ${'</scr' + 'ipt>'}
                 const urlParams = new URLSearchParams(window.location.search);
                 const sessionCode = urlParams.get('session');
                 const creatorParam = urlParams.get('creator');
-                
+
                 if (sessionCode) {
                     if (!supabase && !(await initSupabase())) {
                         alert('Supabaseの初期化に失敗しました。');
@@ -2712,43 +3447,43 @@ ${'</scr' + 'ipt>'}
                     }
 
                     appState.sessionCode = sessionCode;
-                    
+
                     // Supabaseからセッションデータを読み込み（申請状況もチェック）
                     const loaded = await loadSessionAndCheckStatus(sessionCode);
                     if (!loaded) {
                         alert('セッションが見つかりません。');
                         return;
                     }
-                    
+
                     // 管理者権限の検証
                     let isCreator = false;
                     if (creatorParam) {
                         if (creatorParam === 'true') {
                             // 下位互換性のため、古い形式も一時的にサポート
-                            console.warn('⚠️ Using deprecated creator=true format. Please use new secure token format.');
+                            console.warn('Using deprecated creator=true format. Please use new secure token format.');
                             isCreator = true;
                         } else if (creatorParam === appState.creatorToken) {
                             // 新しいトークン形式での検証
                             isCreator = true;
-                            console.log('✅ Creator token verified');
+                            console.log('Creator token verified');
                         } else {
-                            console.log('❌ Invalid creator token');
+                            console.log('Invalid creator token');
                             alert('無効な管理者権限です。正しい管理者URLを使用してください。');
                             return;
                         }
                     }
-                    
+
                     appState.isCreator = isCreator;
-                    
+
                     if (isCreator) {
                         showManagementSection();
                     } else {
                         showViewSection();
                         setupRealtimeSubscription();
                     }
-                    
+
                     updateDisplay();
-                    
+
                     // 初期化後にSortableをセットアップ
                     setTimeout(() => {
                         if (appState.isCreator) {
@@ -2763,27 +3498,27 @@ ${'</scr' + 'ipt>'}
         }
 
         // ページ読み込み時の初期化
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             initializeFromUrl();
             const vh = document.getElementById('viewerHint');
             if (vh) vh.textContent = t('viewer_hint');
         });
 
         // ページを閉じる際のクリーンアップ
-        window.addEventListener('beforeunload', function() {
+        window.addEventListener('beforeunload', function () {
             unsubscribeRealtime();
         });
 
         // 承認システム関数
-        
+
         // 承認設定の更新
         async function updateApprovalSetting() {
             const checkbox = document.getElementById('currentApprovalRequired');
             const indicator = document.getElementById('approvalStatusIndicator');
             const approvalRequired = checkbox.checked;
-            
+
             console.log('🔧 Updating approval setting:', approvalRequired);
-            
+
             // UI更新
             if (indicator) {
                 if (approvalRequired) {
@@ -2792,32 +3527,32 @@ ${'</scr' + 'ipt>'}
                     indicator.innerHTML = '<span style="color: #27ae60;">🔓 直接参加可能 - 閲覧者も自由に参加できます</span>';
                 }
             }
-            
+
             appState.approvalRequired = approvalRequired;
-            
+
             try {
                 // Supabaseに保存
                 await saveSessionToSupabase();
-                console.log('✅ Approval setting saved successfully');
-                
+                console.log('Approval setting saved successfully');
+
                 // 承認セクションの表示/非表示を更新
                 updatePendingRegistrationsDisplay();
-                
+
                 // 一時的な成功メッセージ
                 if (indicator) {
                     const originalContent = indicator.innerHTML;
-                    indicator.innerHTML += ' <span style="color: #27ae60;">✅ 保存完了</span>';
+                    indicator.innerHTML += ' <span style="color: #27ae60;">保存完了</span>';
                     setTimeout(() => {
                         indicator.innerHTML = originalContent;
                     }, 2000);
                 }
             } catch (error) {
-                console.error('❌ Failed to save approval setting:', error);
+                console.error('Failed to save approval setting:', error);
                 // エラー時は元に戻す
                 checkbox.checked = !approvalRequired;
                 appState.approvalRequired = !approvalRequired;
                 if (indicator) {
-                    indicator.innerHTML = '<span style="color: #e74c3c;">❌ 設定の保存に失敗しました</span>';
+                    indicator.innerHTML = '<span style="color: #e74c3c;">設定の保存に失敗しました</span>';
                 }
             }
         }
@@ -2826,7 +3561,7 @@ ${'</scr' + 'ipt>'}
         function updateRegistrationModeDisplay() {
             const description = document.getElementById('registrationModeDescription');
             const indicator = document.getElementById('approvalStatusIndicator');
-            
+
             if (description) {
                 switch (appState.registrationMode) {
                     case 'disabled':
@@ -2840,7 +3575,7 @@ ${'</scr' + 'ipt>'}
                         break;
                 }
             }
-            
+
             if (indicator) {
                 switch (appState.registrationMode) {
                     case 'disabled':
@@ -2862,9 +3597,9 @@ ${'</scr' + 'ipt>'}
             const indicator = document.getElementById('approvalStatusIndicator');
             const description = document.getElementById('registrationModeDescription');
             const registrationMode = select.value;
-            
+
             console.log('🔧 Updating registration mode:', registrationMode);
-            
+
             // 説明文を更新
             if (description) {
                 switch (registrationMode) {
@@ -2879,7 +3614,7 @@ ${'</scr' + 'ipt>'}
                         break;
                 }
             }
-            
+
             // ステータス表示を更新
             if (indicator) {
                 switch (registrationMode) {
@@ -2894,34 +3629,34 @@ ${'</scr' + 'ipt>'}
                         break;
                 }
             }
-            
+
             appState.registrationMode = registrationMode;
             // 下位互換性のためapprovalRequiredも更新
             appState.approvalRequired = (registrationMode === 'approval');
-            
+
             try {
                 // Supabaseに保存
                 await saveSessionToSupabase();
-                console.log('✅ Registration mode saved successfully');
-                
+                console.log('Registration mode saved successfully');
+
                 // 承認セクションの表示/非表示を更新
                 updatePendingRegistrationsDisplay();
                 updateRegistrationStatus();
-                
+
                 // 一時的な成功メッセージ
                 if (indicator) {
                     const originalContent = indicator.innerHTML;
-                    indicator.innerHTML += ' <span style="color: #27ae60;">✅ 保存完了</span>';
+                    indicator.innerHTML += ' <span style="color: #27ae60;">保存完了</span>';
                     setTimeout(() => {
                         indicator.innerHTML = originalContent;
                     }, 2000);
                 }
             } catch (error) {
-                console.error('❌ Failed to save registration mode:', error);
+                console.error('Failed to save registration mode:', error);
                 // エラー時は元に戻す
                 select.value = appState.registrationMode;
                 if (indicator) {
-                    indicator.innerHTML = '<span style="color: #e74c3c;">❌ 設定の保存に失敗しました</span>';
+                    indicator.innerHTML = '<span style="color: #e74c3c;">設定の保存に失敗しました</span>';
                 }
             }
         }
@@ -2930,12 +3665,12 @@ ${'</scr' + 'ipt>'}
         async function submitRegistration() {
             const nameInput = document.getElementById('registrationName');
             const name = nameInput.value.trim();
-            
+
             if (!name) {
                 alert('お名前を入力してください');
                 return;
             }
-            
+
             try {
                 if (appState.registrationMode === 'direct') {
                     // 直接登録モード：ユーザーを直接キューに追加
@@ -2952,7 +3687,7 @@ ${'</scr' + 'ipt>'}
                 alert('登録の送信に失敗しました');
             }
         }
-        
+
         // 直接登録処理
         async function addDirectUser(name) {
             // 重複チェック
@@ -2960,7 +3695,7 @@ ${'</scr' + 'ipt>'}
                 alert('その名前のユーザーは既に参加しています');
                 return;
             }
-            
+
             const newUser = {
                 id: appState.userIdCounter++,
                 name: name,
@@ -2968,32 +3703,32 @@ ${'</scr' + 'ipt>'}
                 orderIndex: Math.max(...appState.queue.map(u => u.orderIndex), 0) + 1,
                 isFixed: false
             };
-            
+
             appState.queue.push(newUser);
-            
+
             // Supabaseに保存
             const saved = await saveUsersToSupabase();
             if (saved) {
                 // UI更新
                 updateDisplay();
-                
+
                 // 入力フィールドをクリア
                 document.getElementById('registrationName').value = '';
-                
+
                 // 成功メッセージ
                 appState.userRegistrationStatus = 'approved';
                 appState.userRegistrationName = name;
                 updateRegistrationStatus();
-                
+
                 alert('参加登録が完了しました！キューに追加されました。');
-                console.log('✅ Direct registration successful:', name);
+                console.log('Direct registration successful:', name);
             } else {
                 // エラー時はappStateから削除
                 appState.queue = appState.queue.filter(u => u.id !== newUser.id);
                 throw new Error('データベース保存に失敗しました');
             }
         }
-        
+
         // 承認制登録処理
         async function addPendingRegistration(name) {
             const { data, error } = await supabase
@@ -3006,22 +3741,22 @@ ${'</scr' + 'ipt>'}
                     }
                 ])
                 .select();
-            
+
             if (error) {
                 console.error('Pending registration submission error:', error);
                 throw error;
             }
-            
+
             // ユーザーの申請状況を更新
             appState.userRegistrationStatus = 'pending';
             appState.userRegistrationName = name;
             saveRegistrationStatusToStorage();
             document.getElementById('registrationName').value = '';
             updateRegistrationStatus();
-            
+
             alert('参加申請を送信しました。管理者の承認をお待ちください。');
-            console.log('✅ Pending registration submitted:', name);
-            
+            console.log('Pending registration submitted:', name);
+
             // 申請後にポーリングを開始（リアルタイム購読の補完）
             setupViewerStatusPolling();
         }
@@ -3044,7 +3779,7 @@ ${'</scr' + 'ipt>'}
                     showFlag('既に参加済みのため却下しました', 'warning');
                     return;
                 }
-                
+
                 // pending_registrationsの状態を更新
                 const { error: updateError } = await supabase
                     .from('pending_registrations')
@@ -3053,14 +3788,14 @@ ${'</scr' + 'ipt>'}
                         approved_at: new Date().toISOString()
                     })
                     .eq('id', registrationId);
-                
+
                 if (updateError) {
                     console.error('Approval update error:', updateError);
                     alert('承認の更新に失敗しました');
                     showFlag(t('approve_failed'), 'error');
                     return;
                 }
-                
+
                 // ユーザーを追加
                 const newUser = {
                     id: appState.userIdCounter++,
@@ -3068,21 +3803,21 @@ ${'</scr' + 'ipt>'}
                     joinedAt: new Date(),
                     isFixed: false
                 };
-                
+
                 if (appState.party.length < appState.partySize) {
                     appState.party.push(newUser);
                 } else {
                     appState.queue.push(newUser);
                 }
-                
+
                 // Supabaseに保存
                 await saveUsersToSupabase();
-                
+
                 // 表示を更新
                 updateDisplay();
                 loadPendingRegistrations();
                 showFlag(t('approve_done'), 'success');
-                
+
             } catch (error) {
                 console.error('Approval exception:', error);
                 alert('承認処理に失敗しました');
@@ -3102,17 +3837,17 @@ ${'</scr' + 'ipt>'}
                         status: 'rejected'
                     })
                     .eq('id', registrationId);
-                
+
                 if (error) {
                     console.error('Rejection error:', error);
                     alert('却下の更新に失敗しました');
                     showFlag(t('reject_failed'), 'error');
                     return;
                 }
-                
+
                 loadPendingRegistrations();
                 showFlag(t('reject_done'), 'success');
-                
+
             } catch (error) {
                 console.error('Rejection exception:', error);
                 alert('却下処理に失敗しました');
@@ -3125,18 +3860,18 @@ ${'</scr' + 'ipt>'}
         // 保留申請の読み込み
         async function loadPendingRegistrations() {
             if (!appState.sessionId) {
-                console.log('❌ loadPendingRegistrations: No session ID');
+                console.log('loadPendingRegistrations: No session ID');
                 return;
             }
-            
+
             if (appState.isLoadingPendingRegistrations) {
                 console.log('⏳ loadPendingRegistrations: Already loading, skipping');
                 return;
             }
-            
+
             appState.isLoadingPendingRegistrations = true;
             console.log('🔍 Loading pending registrations for session:', appState.sessionId);
-            
+
             try {
                 const { data, error } = await supabase
                     .from('pending_registrations')
@@ -3144,20 +3879,20 @@ ${'</scr' + 'ipt>'}
                     .eq('session_id', appState.sessionId)
                     .eq('status', 'pending')
                     .order('requested_at', { ascending: true });
-                
+
                 if (error) {
-                    console.error('❌ Load pending registrations error:', error);
+                    console.error('Load pending registrations error:', error);
                     appState.isLoadingPendingRegistrations = false;
                     return;
                 }
-                
-                console.log('✅ Loaded pending registrations:', data);
+
+                console.log('Loaded pending registrations:', data);
                 appState.pendingRegistrations = data || [];
                 console.log('📊 Updated appState.pendingRegistrations:', appState.pendingRegistrations);
                 updatePendingRegistrationsDisplay();
-                
+
             } catch (error) {
-                console.error('❌ Load pending registrations exception:', error);
+                console.error('Load pending registrations exception:', error);
             } finally {
                 appState.isLoadingPendingRegistrations = false;
             }
@@ -3170,20 +3905,20 @@ ${'</scr' + 'ipt>'}
                 approvalRequired: appState.approvalRequired,
                 pendingCount: appState.pendingRegistrations.length
             });
-            
+
             const section = document.getElementById('pendingRegistrationsSection');
             const list = document.getElementById('pendingRegistrationsList');
-            
+
             if (!section || !list) {
-                console.log('❌ Section or list element not found', { section: !!section, list: !!list });
+                console.log('Section or list element not found', { section: !!section, list: !!list });
                 return;
             }
-            
+
             // 管理者で承認制が有効な場合のみ表示
             if (appState.isCreator && appState.approvalRequired) {
-                console.log('✅ Showing pending registrations section');
+                console.log('Showing pending registrations section');
                 section.style.display = 'block';
-                
+
                 if (appState.pendingRegistrations.length === 0) {
                     console.log('📝 No pending registrations to display');
                     list.setAttribute('role', 'list');
@@ -3201,9 +3936,9 @@ ${'</scr' + 'ipt>'}
                         const item = document.createElement('div');
                         item.className = 'pending-registration-item';
                         item.setAttribute('role', 'listitem');
-                        
+
                         const requestTime = new Date(registration.requested_at).toLocaleString('ja-JP');
-                        
+
                         item.innerHTML = `
                             <div>
                                 <div class="pending-registration-name">${registration.name}</div>
@@ -3214,12 +3949,12 @@ ${'</scr' + 'ipt>'}
                                 <button class="btn-reject" aria-label="${registration.name} を却下" onclick="rejectRegistration(${registration.id})">却下</button>
                             </div>
                         `;
-                        
+
                         list.appendChild(item);
                     });
                 }
             } else {
-                console.log('❌ Not showing pending registrations section', {
+                console.log('Not showing pending registrations section', {
                     isCreator: appState.isCreator,
                     approvalRequired: appState.approvalRequired
                 });
@@ -3235,22 +3970,22 @@ ${'</scr' + 'ipt>'}
                 userRegistrationStatus: appState.userRegistrationStatus,
                 userRegistrationName: appState.userRegistrationName
             });
-            
+
             const form = document.getElementById('selfRegistrationForm');
             const statusDiv = document.getElementById('registrationStatus');
             const inputArea = document.getElementById('registrationInputArea');
             const submitButton = document.querySelector('#registrationInputArea .btn');
-            
+
             if (!form || !statusDiv || !inputArea) {
-                console.log('❌ Registration form elements not found');
+                console.log('Registration form elements not found');
                 return;
             }
-            
+
             // 閲覧者で登録が有効な場合のみ表示
             if (!appState.isCreator && (appState.registrationMode === 'direct' || appState.registrationMode === 'approval')) {
-                console.log('✅ Showing registration form for mode:', appState.registrationMode);
+                console.log('Showing registration form for mode:', appState.registrationMode);
                 form.style.display = 'block';
-                
+
                 // ボタンテキストを登録モードに応じて変更
                 if (submitButton) {
                     if (appState.registrationMode === 'direct') {
@@ -3259,18 +3994,18 @@ ${'</scr' + 'ipt>'}
                         submitButton.textContent = '参加申請を送信';
                     }
                 }
-                
+
                 if (appState.registrationMode === 'direct') {
                     // 直接登録モード
                     if (appState.userRegistrationStatus === 'approved') {
                         console.log('📝 Displaying direct registration success');
                         const isInPartyOrQueue = appState.party.some(user => user.name === appState.userRegistrationName) ||
-                                               appState.queue.some(user => user.name === appState.userRegistrationName);
-                        
+                            appState.queue.some(user => user.name === appState.userRegistrationName);
+
                         if (isInPartyOrQueue) {
-                            statusDiv.innerHTML = `<div class="registration-status status-approved">✅ 参加登録完了！"${appState.userRegistrationName}" としてパーティー/キューに追加されています。</div>`;
+                            statusDiv.innerHTML = `<div class="registration-status status-approved">参加登録完了！"${appState.userRegistrationName}" としてパーティー/キューに追加されています。</div>`;
                         } else {
-                            statusDiv.innerHTML = `<div class="registration-status status-approved">✅ 参加登録完了！まもなくパーティー/キューに反映されます。</div>`;
+                            statusDiv.innerHTML = `<div class="registration-status status-approved">参加登録完了！まもなくパーティー/キューに反映されます。</div>`;
                         }
                         inputArea.style.display = 'block'; // 直接登録では再登録可能
                     } else {
@@ -3287,10 +4022,10 @@ ${'</scr' + 'ipt>'}
                     } else if (appState.userRegistrationStatus === 'approved') {
                         console.log('📝 Displaying approved status');
                         const isInPartyOrQueue = appState.party.some(user => user.name === appState.userRegistrationName) ||
-                                               appState.queue.some(user => user.name === appState.userRegistrationName);
-                        
+                            appState.queue.some(user => user.name === appState.userRegistrationName);
+
                         if (isInPartyOrQueue) {
-                            statusDiv.innerHTML = `<div class="registration-status status-approved">✅ 申請が承認されました！"${appState.userRegistrationName}" としてパーティー/キューに追加されています。</div>`;
+                            statusDiv.innerHTML = `<div class="registration-status status-approved">申請が承認されました！"${appState.userRegistrationName}" としてパーティー/キューに追加されています。</div>`;
                         } else {
                             statusDiv.innerHTML = `<div class="registration-status status-approved">✅ 申請が承認されました！まもなくパーティー/キューに反映されます。</div>`;
                         }
@@ -3310,7 +4045,7 @@ ${'</scr' + 'ipt>'}
                 form.style.display = 'none';
             }
         }
-        
+
         // 管理者向けリアルタイム購読（session_usersとsessionsのみ）
         function setupCreatorRealtimeSubscription() {
             if (!supabase || !appState.sessionId || !appState.isCreator) {
@@ -3385,15 +4120,15 @@ ${'</scr' + 'ipt>'}
 
         // 保留申請用のポーリング機能（リアルタイム購読の代替）
         let pendingRegistrationsPollingInterval = null;
-        
+
         function setupPendingRegistrationsPolling() {
             if (!appState.isCreator || pendingRegistrationsPollingInterval) return;
-            
+
             console.log('🔄 Setting up pending registrations polling');
-            
+
             // 初回ロード
             loadPendingRegistrations();
-            
+
             // 5秒ごとにポーリング
             pendingRegistrationsPollingInterval = setInterval(() => {
                 if (appState.isCreator && appState.approvalRequired) {
@@ -3401,7 +4136,7 @@ ${'</scr' + 'ipt>'}
                 }
             }, 5000);
         }
-        
+
         function stopPendingRegistrationsPolling() {
             if (pendingRegistrationsPollingInterval) {
                 clearInterval(pendingRegistrationsPollingInterval);
@@ -3412,7 +4147,7 @@ ${'</scr' + 'ipt>'}
 
         // 表示更新時に承認関連も更新するよう既存のupdateDisplay関数を拡張
         const originalUpdateDisplay = updateDisplay;
-        updateDisplay = function() {
+        updateDisplay = function () {
             originalUpdateDisplay();
             updateRegistrationStatus();
             if (appState.isCreator) {
@@ -3430,9 +4165,9 @@ ${'</scr' + 'ipt>'}
                 });
                 return;
             }
-            
+
             console.log('🔍 Checking user registration status for:', appState.userRegistrationName);
-            
+
             try {
                 const { data, error } = await supabase
                     .from('pending_registrations')
@@ -3441,32 +4176,32 @@ ${'</scr' + 'ipt>'}
                     .eq('name', appState.userRegistrationName)
                     .order('requested_at', { ascending: false })
                     .limit(1);
-                
+
                 if (error) {
                     console.error('❌ Check registration status error:', error);
                     return;
                 }
-                
+
                 console.log('✅ Registration status query result:', data);
-                
+
                 if (data && data.length > 0) {
                     const registration = data[0];
                     const oldStatus = appState.userRegistrationStatus;
                     appState.userRegistrationStatus = registration.status;
-                    
+
                     console.log(`📊 Status comparison: ${oldStatus} -> ${registration.status}`);
-                    
+
                     // 状況が変更された場合はローカルストレージを更新
                     if (oldStatus !== registration.status) {
                         saveRegistrationStatusToStorage();
                         console.log(`✅ Registration status changed: ${oldStatus} -> ${registration.status}`);
                     }
-                    
+
                     // 承認された場合、ユーザーがパーティー/キューに追加されているかチェック
                     if (registration.status === 'approved') {
                         const isInPartyOrQueue = appState.party.some(user => user.name === appState.userRegistrationName) ||
-                                               appState.queue.some(user => user.name === appState.userRegistrationName);
-                        
+                            appState.queue.some(user => user.name === appState.userRegistrationName);
+
                         if (isInPartyOrQueue) {
                             // 承認されてパーティー/キューに追加済み
                             console.log('User has been approved and added to party/queue');
@@ -3482,7 +4217,7 @@ ${'</scr' + 'ipt>'}
                         localStorage.removeItem(storageKey);
                     }
                 }
-                
+
             } catch (error) {
                 console.error('Check registration status exception:', error);
             }
@@ -3491,10 +4226,10 @@ ${'</scr' + 'ipt>'}
         // ローカルストレージから申請状況を復元
         function loadRegistrationStatusFromStorage() {
             if (!appState.sessionCode || appState.isCreator) return;
-            
+
             const storageKey = `registration_${appState.sessionCode}`;
             const stored = localStorage.getItem(storageKey);
-            
+
             if (stored) {
                 try {
                     const data = JSON.parse(stored);
@@ -3511,14 +4246,14 @@ ${'</scr' + 'ipt>'}
         // ローカルストレージに申請状況を保存
         function saveRegistrationStatusToStorage() {
             if (!appState.sessionCode || appState.isCreator || !appState.userRegistrationName) return;
-            
+
             const storageKey = `registration_${appState.sessionCode}`;
             const data = {
                 name: appState.userRegistrationName,
                 status: appState.userRegistrationStatus,
                 timestamp: new Date().getTime()
             };
-            
+
             localStorage.setItem(storageKey, JSON.stringify(data));
         }
 
@@ -3537,13 +4272,13 @@ ${'</scr' + 'ipt>'}
         }
 
         // デバッグ用：手動で保留申請をリロード
-        window.debugLoadPendingRegistrations = function() {
+        window.debugLoadPendingRegistrations = function () {
             console.log('🔧 Manual debug load pending registrations');
             loadPendingRegistrations();
         };
 
         // デバッグ用：現在の状態を表示
-        window.debugAppState = function() {
+        window.debugAppState = function () {
             console.log('🔧 Current appState:', {
                 sessionId: appState.sessionId,
                 sessionCode: appState.sessionCode,
@@ -3568,7 +4303,7 @@ ${'</scr' + 'ipt>'}
 
         // 管理セクション表示時にリアルタイム購読とポーリングを設定するよう拡張
         const originalShowManagementSection = showManagementSection;
-        showManagementSection = function() {
+        showManagementSection = function () {
             originalShowManagementSection();
             if (appState.isCreator) {
                 console.log('🚀 showManagementSection: Setting up creator features');
@@ -3586,15 +4321,15 @@ ${'</scr' + 'ipt>'}
 
         // 閲覧者用の申請状況ポーリング
         let viewerStatusPollingInterval = null;
-        
+
         function setupViewerStatusPolling() {
             if (appState.isCreator || viewerStatusPollingInterval || !appState.userRegistrationName) return;
-            
+
             console.log('🔄 Setting up viewer status polling');
-            
+
             // 初回チェック
             checkUserRegistrationStatus();
-            
+
             // 3秒ごとにポーリング
             viewerStatusPollingInterval = setInterval(() => {
                 if (!appState.isCreator && appState.userRegistrationName) {
@@ -3602,12 +4337,12 @@ ${'</scr' + 'ipt>'}
                 }
             }, 3000);
         }
-        
+
         function stopViewerStatusPolling() {
             if (viewerStatusPollingInterval) {
                 clearInterval(viewerStatusPollingInterval);
                 viewerStatusPollingInterval = null;
-                console.log('⏹️ Stopped viewer status polling');
+                console.log('Stopped viewer status polling');
             }
         }
 
@@ -3615,43 +4350,43 @@ ${'</scr' + 'ipt>'}
         function updateRotationOptions(selectElementId = 'rotationCount', partySize = null, fixedCount = 0) {
             const select = document.getElementById(selectElementId);
             if (!select) return;
-            
+
             // パーティー人数を取得
             if (partySize === null) {
                 const partySizeSelect = document.getElementById(selectElementId === 'rotationCount' ? 'partySize' : 'currentPartySize');
                 partySize = parseInt(partySizeSelect?.value || appState.partySize || 5);
             }
-            
+
             // 固定ユーザー数を取得（管理画面の場合）
             if (selectElementId === 'currentRotationCount' && appState.party) {
                 fixedCount = appState.party.filter(user => user.isFixed).length;
             }
-            
+
             // 交代可能な最大人数
             const maxRotation = Math.max(1, partySize - fixedCount);
-            
+
             console.log('🔧 Updating rotation options:', { partySize, fixedCount, maxRotation });
-            
+
             // 現在の値を保存
             const currentValue = parseInt(select.value) || 1;
-            
+
             // 選択肢をクリア
             select.innerHTML = '';
-            
+
             // 新しい選択肢を生成
             for (let i = 1; i <= maxRotation; i++) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = `${i}人ずつ交代`;
-                
+
                 // 現在の値を維持（範囲内の場合）
                 if (i === Math.min(currentValue, maxRotation)) {
                     option.selected = true;
                 }
-                
+
                 select.appendChild(option);
             }
-            
+
             // appStateも更新（管理画面の場合）
             if (selectElementId === 'currentRotationCount') {
                 appState.rotationCount = Math.min(currentValue, maxRotation);
@@ -3670,7 +4405,7 @@ ${'</scr' + 'ipt>'}
 
         // 既存のbeforeunloadイベントにポーリング停止を追加
         const originalUnsubscribeRealtime = unsubscribeRealtime;
-        unsubscribeRealtime = function() {
+        unsubscribeRealtime = function () {
             stopPendingRegistrationsPolling();
             stopViewerStatusPolling();
             originalUnsubscribeRealtime();
@@ -3678,4 +4413,5 @@ ${'</scr' + 'ipt>'}
     </script>
 </body>
 <script src="./assets/atlaskit-forms.iife.js" defer></script>
+
 </html>

@@ -4,7 +4,9 @@
   "description": "Queue Party（Supabase統合版）",
   "scripts": {
     "dev": "vite",
-    "build": "node build.js && vite build",
+    "build": "node build.js && vite build && pnpm run build:modern",
+    "build:modern": "vite build --config vite.config.site.ts && node -e \"const fs=require('fs'); const path=require('path'); ['modern.html'].forEach(f => { const src=path.join('dist',f); if(fs.existsSync(src)) fs.copyFileSync(src, path.join('public',f)); }); const distAssets='dist/assets'; const pubAssets='public/assets'; if(fs.existsSync(distAssets)) fs.readdirSync(distAssets).filter(f=>f.startsWith('modern-')).forEach(f=>fs.copyFileSync(path.join(distAssets,f),path.join(pubAssets,f)));\"",
+    "build:site": "vite build --config vite.config.site.ts && node -e \"const fs=require('fs'); if(!fs.existsSync('dist')) fs.mkdirSync('dist'); fs.copyFileSync('index.html', 'dist/index.html')\"",
     "preview": "vite preview",
     "start": "vite"
   },
