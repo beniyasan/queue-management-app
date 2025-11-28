@@ -74,16 +74,22 @@ export function YouTubeSettings() {
 
   const handleEnabledChange = () => {
     const newEnabled = !state.enabled;
-    setState(prev => ({ ...prev, enabled: newEnabled }));
     
     // Trigger the main app's toggle function
     try {
       if (newEnabled) {
+        setState(prev => ({ ...prev, enabled: true }));
         (window as any).startYouTubeIntegration?.(state.videoUrl, state.keyword);
       } else {
+        // 即座にUIを更新
+        setState(prev => ({ ...prev, enabled: false, status: 'disconnected' }));
         (window as any).stopYouTubeIntegration?.();
       }
-    } catch {}
+    } catch (e) {
+      console.error('YouTube toggle error:', e);
+      // エラー時は状態をリセット
+      setState(prev => ({ ...prev, enabled: false, status: 'disconnected' }));
+    }
   };
 
   const handleConnect = () => {

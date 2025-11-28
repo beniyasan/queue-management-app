@@ -3124,6 +3124,13 @@ ${'</scr' + 'ipt>'}
                     throw new Error(`YouTube API エラー: ${response.status}`);
                 }
 
+                // SSEがサポートされているか確認
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('text/event-stream')) {
+                    console.warn('streamList API (SSE) がサポートされていません。ポーリングモードにフォールバックします。');
+                    throw new Error('SSE_NOT_SUPPORTED');
+                }
+
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
@@ -3402,6 +3409,22 @@ ${'</scr' + 'ipt>'}
                         appState.youtube.useStreamList = false;
                         if (appState.youtube.enabled) {
                             appState.youtube.pollingInterval = setInterval(pollYouTubeChat, 30000);
+                        }
+                        break;
+                    }
+                    
+                    if (error.message === 'SSE_NOT_SUPPORTED') {
+                        showFlag('ストリーミングモードがサポートされていません。ポーリングモードに切り替えます。', 'warning');
+                        // ポーリングモードにフォールバック
+                        appState.youtube.useStreamList = false;
+                        if (appState.youtube.enabled) {
+                            const result = await fetchYouTubeChatMessages(appState.youtube.chatId);
+                            appState.youtube.nextPageToken = result.nextPageToken;
+                            result.messages.forEach(msg => {
+                                appState.youtube.processedMessageIds.add(msg.id);
+                            });
+                            appState.youtube.pollingInterval = setInterval(pollYouTubeChat, 10000);
+                            console.log('YouTube Live ポーリング開始 (間隔: 10000ms)');
                         }
                         break;
                     }
