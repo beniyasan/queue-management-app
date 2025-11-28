@@ -3260,8 +3260,11 @@ ${'</scr' + 'ipt>'}
 
         // YouTube接続テスト
         async function connectYouTube(url, keyword) {
-            const videoUrl = url || document.getElementById('youtubeUrl')?.value;
-            const triggerKeyword = keyword || document.getElementById('youtubeKeyword')?.value || '!参加';
+            // URLはReactコンポーネントから渡されるか、appStateから取得
+            const videoUrl = url || appState.youtube.videoUrl || document.getElementById('youtubeUrl')?.value;
+            const triggerKeyword = keyword || appState.youtube.keyword || document.getElementById('youtubeKeyword')?.value || '!参加';
+
+            console.log('connectYouTube called with:', { url, keyword, videoUrl, triggerKeyword });
 
             if (!videoUrl) {
                 showFlag('YouTube URLを入力してください', 'error');

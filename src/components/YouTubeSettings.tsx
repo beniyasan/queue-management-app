@@ -58,18 +58,22 @@ export function YouTubeSettings() {
     const videoUrl = e.target.value;
     setState(prev => ({ ...prev, videoUrl }));
     
-    // Sync to legacy DOM element if exists
-    const urlInput = document.getElementById('youtubeUrl') as HTMLInputElement;
-    if (urlInput) urlInput.value = videoUrl;
+    // Sync to appState
+    const appState = (window as any).getAppState?.();
+    if (appState?.youtube) {
+      appState.youtube.videoUrl = videoUrl;
+    }
   };
 
   const handleKeywordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const keyword = e.target.value;
     setState(prev => ({ ...prev, keyword }));
     
-    // Sync to legacy DOM element if exists
-    const keywordInput = document.getElementById('youtubeKeyword') as HTMLInputElement;
-    if (keywordInput) keywordInput.value = keyword;
+    // Sync to appState
+    const appState = (window as any).getAppState?.();
+    if (appState?.youtube) {
+      appState.youtube.keyword = keyword;
+    }
   };
 
   const handleEnabledChange = async () => {
