@@ -58,32 +58,51 @@ export function YouTubeSettings() {
     const videoUrl = e.target.value;
     setState(prev => ({ ...prev, videoUrl }));
     
-    // Sync to legacy DOM element if exists
-    const urlInput = document.getElementById('youtubeUrl') as HTMLInputElement;
-    if (urlInput) urlInput.value = videoUrl;
+    // Sync to appState
+    const appState = (window as any).getAppState?.();
+    if (appState?.youtube) {
+      appState.youtube.videoUrl = videoUrl;
+    }
   };
 
   const handleKeywordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const keyword = e.target.value;
     setState(prev => ({ ...prev, keyword }));
     
-    // Sync to legacy DOM element if exists
-    const keywordInput = document.getElementById('youtubeKeyword') as HTMLInputElement;
-    if (keywordInput) keywordInput.value = keyword;
+    // Sync to appState
+    const appState = (window as any).getAppState?.();
+    if (appState?.youtube) {
+      appState.youtube.keyword = keyword;
+    }
   };
 
-  const handleEnabledChange = () => {
+  const handleEnabledChange = async () => {
     const newEnabled = !state.enabled;
-    setState(prev => ({ ...prev, enabled: newEnabled }));
+    
+    // 即座にUIを更新
+    setState(prev => ({ ...prev, enabled: newEnabled, status: newEnabled ? 'connecting' : 'disconnected' }));
     
     // Trigger the main app's toggle function
     try {
       if (newEnabled) {
-        (window as any).startYouTubeIntegration?.(state.videoUrl, state.keyword);
+        await (window as any).startYouTubeIntegration?.(state.videoUrl, state.keyword);
+        // 完了後に状態を同期
+        const appState = (window as any).getAppState?.();
+        if (appState?.youtube) {
+          setState(prev => ({
+            ...prev,
+            enabled: appState.youtube.enabled,
+            status: appState.youtube.status || 'disconnected'
+          }));
+        }
       } else {
         (window as any).stopYouTubeIntegration?.();
       }
-    } catch {}
+    } catch (e) {
+      console.error('YouTube toggle error:', e);
+      // エラー時は状態をリセット
+      setState(prev => ({ ...prev, enabled: false, status: 'disconnected' }));
+    }
   };
 
   const handleConnect = () => {
