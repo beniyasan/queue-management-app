@@ -995,8 +995,8 @@
                 <div id="youtubeSection" class="settings-panel">
                     <h3>📺 YouTube Live 連携</h3>
                     <div id="youtubeSettingsMount"></div>
-                    <!-- Fallback UI if React component doesn't load -->
-                    <div id="youtubeFallbackUI">
+                    <!-- Fallback UI if React component doesn't load (hidden by default) -->
+                    <div id="youtubeFallbackUI" style="display: none;">
                         <div class="form-group" style="margin-bottom: 12px;">
                             <label for="youtubeUrl">YouTube Live URL:</label>
                             <div style="display: flex; gap: 8px;">
@@ -2099,11 +2099,17 @@
             try {
                 if (window && window.FormsMount && window.FormsMount.mountYouTube) {
                     window.FormsMount.mountYouTube();
-                    // ReactコンポーネントがマウントされたらフォールバックUIを非表示
+                    // ReactコンポーネントがマウントされたらフォールバックUIは非表示のまま
+                } else {
+                    // Reactコンポーネントがない場合はフォールバックUIを表示
                     const fallback = document.getElementById('youtubeFallbackUI');
-                    if (fallback) fallback.style.display = 'none';
+                    if (fallback) fallback.style.display = 'block';
                 }
-            } catch (_) { }
+            } catch (_) {
+                // エラー時はフォールバックUIを表示
+                const fallback = document.getElementById('youtubeFallbackUI');
+                if (fallback) fallback.style.display = 'block';
+            }
         }
 
         // 閲覧専用セクションを表示
@@ -3348,21 +3354,26 @@ ${'</scr' + 'ipt>'}
                     // ストリーミング接続を開始（非同期で実行し続ける）
                     startYouTubeStreamListWithRetry();
                 } else {
-                    // 従来のポーリング方式（フォールバック）
-                    const result = await fetchYouTubeChatMessages(appState.youtube.chatId);
-                    appState.youtube.nextPageToken = result.nextPageToken;
+                    // 従来のポーリング方式
+                    console.log('YouTube ポーリングモードで開始します');
+                    
+                    // 初回のメッセージ取得を試みる（失敗しても続行）
+                    try {
+                        const result = await fetchYouTubeChatMessages(appState.youtube.chatId);
+                        appState.youtube.nextPageToken = result.nextPageToken;
+                        // 既存のメッセージIDを記録（重複処理を防ぐ）
+                        result.messages.forEach(msg => {
+                            appState.youtube.processedMessageIds.add(msg.id);
+                        });
+                    } catch (fetchError) {
+                        console.warn('初回メッセージ取得失敗（ポーリングは継続）:', fetchError);
+                    }
 
-                    // 既存のメッセージIDを記録（重複処理を防ぐ）
-                    result.messages.forEach(msg => {
-                        appState.youtube.processedMessageIds.add(msg.id);
-                    });
+                    // ポーリング開始（10秒間隔）
+                    appState.youtube.pollingInterval = setInterval(pollYouTubeChat, 10000);
 
-                    // ポーリング開始（最低10秒間隔）
-                    const interval = Math.max(result.pollingIntervalMillis, 10000);
-                    appState.youtube.pollingInterval = setInterval(pollYouTubeChat, interval);
-
-                    console.log(`YouTube Live ポーリング開始 (間隔: ${interval}ms)`);
-                    showFlag('YouTube Live 連携を開始しました (ポーリングモード)', 'success');
+                    console.log('YouTube Live ポーリング開始 (間隔: 10000ms)');
+                    showFlag('YouTube Live 連携を開始しました', 'success');
                     updateYouTubeStatus('connected', '', appState.youtube.streamTitle);
 
                     // DB保存
