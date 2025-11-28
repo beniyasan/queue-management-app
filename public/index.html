@@ -3322,8 +3322,11 @@ ${'</scr' + 'ipt>'}
             if (!appState.youtube.chatId) {
                 const connected = await connectYouTube(url, keyword);
                 if (!connected) {
-                    const checkbox = document.getElementById('youtubeEnabled');
-                    if (checkbox) checkbox.checked = false;
+                    // Reactコンポーネントに通知（状態をリセット）
+                    appState.youtube.enabled = false;
+                    try {
+                        if (window.refreshYouTubeSettings) window.refreshYouTubeSettings();
+                    } catch (_) {}
                     return;
                 }
             }
@@ -3370,8 +3373,10 @@ ${'</scr' + 'ipt>'}
                 showFlag(error.message || 'YouTube連携の開始に失敗しました', 'error');
                 updateYouTubeStatus('error', error.message);
                 appState.youtube.enabled = false;
-                const checkbox = document.getElementById('youtubeEnabled');
-                if (checkbox) checkbox.checked = false;
+                // Reactコンポーネントに通知
+                try {
+                    if (window.refreshYouTubeSettings) window.refreshYouTubeSettings();
+                } catch (_) {}
             }
         }
 
@@ -3461,8 +3466,12 @@ ${'</scr' + 'ipt>'}
             appState.youtube.enabled = false;
             updateYouTubeStatus('disconnected');
 
-            const checkbox = document.getElementById('youtubeEnabled');
-            if (checkbox) checkbox.checked = false;
+            // フォールバックUIのチェックボックスを更新（Reactコンポーネントがない場合のみ）
+            const fallback = document.getElementById('youtubeFallbackUI');
+            if (fallback && fallback.style.display !== 'none') {
+                const checkbox = document.getElementById('youtubeEnabled');
+                if (checkbox) checkbox.checked = false;
+            }
 
             console.log('YouTube Live 連携を停止しました');
         }
